@@ -1,7 +1,8 @@
 import { assert } from 'chai';
 import { setup } from 'f-mocha';
-import { run, wait } from 'f-promise';
-import { cutter, HttpServer, httpServer, reader as fReader, writer as fWriter } from '../..';
+import { cutter, emptyReader, HttpServer, httpServer, reader as fReader, writer as fWriter } from '../..';
+import { emptySinkWriter, emptySourceReader } from '../../lib';
+
 setup();
 
 const { equal, ok, strictEqual, deepEqual } = assert;
@@ -10,7 +11,7 @@ let server: HttpServer;
 
 describe(module.id, () => {
     it('start echo server', () => {
-        server = httpServer(function(req, res) {
+        server = httpServer(function (req, res) {
             if (req.method === 'POST') {
                 const text = req.readAll();
                 const ct = req.headers['content-type'];
@@ -27,7 +28,7 @@ describe(module.id, () => {
             if (req.method === 'GET') {
                 // query parameters
                 const query = (req.url.split('?')[1] || '').split('&').reduce(
-                    function(prev, crt) {
+                    function (prev, crt) {
                         const parts = crt.split('=');
                         if (parts[0]) prev[parts[0]] = parts[1];
                         return prev;
@@ -101,5 +102,22 @@ describe(module.id, () => {
         const writer = fWriter(Buffer.alloc(0));
         const reply = fReader(buf).pipe(writer);
         deepEqual(writer.result.toString('utf8'), buf.toString('utf8'));
+    });
+
+    it('emptyReader should be usable many times', () => {
+        assert.isUndefined(emptyReader.readAll());
+        assert.isUndefined(emptyReader.readAll());
+    });
+
+    it('emptySourceReader() should be usable many times', () => {
+        assert.isUndefined(emptySourceReader().readAll());
+        assert.isUndefined(emptySourceReader().readAll());
+    });
+
+    it('emptySinkWriter() should be usable many times', () => {
+        assert.doesNotThrow(() => {
+            fReader('string:hello world').pipe(emptySinkWriter());
+            fReader([2, 3, 4]).pipe(emptySinkWriter());
+        });
     });
 });
