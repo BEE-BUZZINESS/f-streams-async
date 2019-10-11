@@ -8,10 +8,10 @@ import { Writer } from '../writer';
 /// * `emptyReader`
 /// * `emptyWriter`
 ///   Empty streams. `emptyReader.read()` returns `undefined`.
-///   `emptyWRiter` is a null sink. It just discards anything you would write to it.
+///   `emptyWriter()` create a null sink. It just discards anything you would write to it.
 export const empty = {
     reader: new Reader(function(this: Reader<any>) {}),
-    writer: new Writer(function(this: Writer<any>, value: any) {}),
+    writer: () => new Writer(function(this: Writer<any>, value: any) {}),
 };
 
 /// !doc
