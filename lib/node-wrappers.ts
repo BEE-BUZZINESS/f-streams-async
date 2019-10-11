@@ -25,6 +25,7 @@ import * as http from 'http';
 import * as https from 'https';
 import * as net from 'net';
 import * as os from 'os';
+import * as stream from 'stream';
 import { parse as parseUrl } from 'url';
 import * as generic from './devices/generic';
 import { Reader } from './reader';
@@ -61,6 +62,7 @@ export class Wrapper<EmitterT extends Emitter> {
         this._closed = false;
         emitter.on('close', () => {
             this._onClose && this._onClose();
+            this._closed = true;
         });
         // hook for subclasses
         this._autoClosed = [];
@@ -301,7 +303,12 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
 
     stop(arg?: any) {
         if (arg && arg !== true) this._error = this._error || arg;
-        this.unwrap();
+        if (!this.closed) {
+            this.unwrap();
+            if (this._emitter instanceof stream.Readable) {
+                this._emitter.destroy();
+            }
+        }
     }
 
     get events() {
@@ -1225,11 +1232,11 @@ exports.using = function(
 ) {
     if (!fn && typeof options === 'function') (fn = options), (options = null);
     if (!fn) throw new Error('using body missing');
-    const stream = new constructor(emitter, options);
+    const _stream = new constructor(emitter, options);
     try {
-        return fn.call(this, stream);
+        return fn.call(this, _stream);
     } finally {
-        stream.close();
+        _stream.close();
     }
 };
 
