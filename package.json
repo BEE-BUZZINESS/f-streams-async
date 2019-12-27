@@ -17,13 +17,13 @@
         "node": ">=8.0.0"
     },
     "dependencies": {
-        "@types/mz": "0.0.30",
         "f-promise": "^2.0.3",
         "mz": "^2.7.0"
     },
     "devDependencies": {
         "@types/chai": "^3.4.34",
         "@types/mocha": "^2.2.43",
+        "@types/mz": "0.0.30",
         "@types/node": "^8.10.32",
         "chai": "^3.5.0",
         "f-mocha": "^2.0.0",
