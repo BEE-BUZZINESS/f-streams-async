@@ -1,4 +1,4 @@
-import { wait } from 'f-promise';
+import { wait } from 'f-promise-async';
 import * as fs from 'fs';
 import { Reader } from '../reader';
 import { Writer } from '../writer';
@@ -14,7 +14,7 @@ export const text = {
     /// * `reader = textFileReader(path, encoding)`
     ///   creates a reader that reads from a text file.
     ///   `encoding` is optional. It defaults to `'utf8'`.
-    reader(path: string, encoding?: string) {
+    reader(path: string, encoding?: BufferEncoding) {
         return node.reader<string>(
             fs.createReadStream(path, {
                 encoding: encoding || 'utf8',
@@ -25,7 +25,7 @@ export const text = {
     /// * `writer = textFileWriter(path, encoding)`
     ///   creates a writer that writes to a text file.
     ///   `encoding` is optional. It defaults to `'utf8'`.
-    writer(path: string, encoding?: string) {
+    writer(path: string, encoding?: BufferEncoding) {
         return node.writer<string>(
             fs.createWriteStream(path, {
                 encoding: encoding || 'utf8',
@@ -79,9 +79,9 @@ export function list(path: string, options?: ListOptions) {
         accept = arguments[2];
     }
     const postorder = recurse === 'postorder';
-    return generic.empty.createReader().transform<ListEntry>((reader, writer) => {
-        function process(p: string, name: string, depth: number) {
-            const stat = wait(cb => fs.stat(p, cb));
+    return generic.empty.createReader().transform<ListEntry>(async (reader, writer) => {
+        async function process(p: string, name: string, depth: number) {
+            const stat = await wait(cb => fs.stat(p, cb));
             const entry = {
                 path: p,
                 name: name,
@@ -89,15 +89,15 @@ export function list(path: string, options?: ListOptions) {
                 stat: stat,
             };
             if (accept && !accept(entry)) return;
-            if ((recurse || depth === 1) && !postorder) writer.write(entry);
+            if ((recurse || depth === 1) && !postorder) await writer.write(entry);
             if ((recurse || depth === 0) && stat.isDirectory()) {
-                wait(cb => fs.readdir(p, cb)).forEach((pp: string) => {
-                    process(p + '/' + pp, pp, depth + 1);
-                });
+                for (const pp of await wait(cb => fs.readdir(p, cb))) {
+                    await process(p + '/' + pp, pp, depth + 1);
+                }
             }
-            if ((recurse || depth === 1) && postorder) writer.write(entry);
+            if ((recurse || depth === 1) && postorder) await writer.write(entry);
         }
 
-        process(path, path.substring(path.lastIndexOf('/') + 1), 0);
+        await process(path, path.substring(path.lastIndexOf('/') + 1), 0);
     });
 }

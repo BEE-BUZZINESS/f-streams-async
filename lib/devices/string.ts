@@ -16,8 +16,8 @@ export interface Options {
 export class StringWriter extends Writer<string> {
     buf: string;
     constructor(options: Options) {
-        super((value: string) => {
-            if (!options.sync) nextTick();
+        super(async (value: string) => {
+            if (!options.sync) await nextTick();
             if (value !== undefined) this.buf += value;
             return this;
         });
@@ -46,8 +46,8 @@ export function reader(text: string, options?: Options | number) {
     } else opts = options || {};
     const chunkSize = opts.chunkSize || 1024;
     let pos = 0;
-    return new Reader(function read() {
-        if (!opts.sync) nextTick();
+    return new Reader(async function read() {
+        if (!opts.sync) await nextTick();
         if (pos >= text.length) return;
         const len = typeof chunkSize === 'function' ? chunkSize() : chunkSize;
         const s = text.substring(pos, pos + len);
@@ -68,11 +68,11 @@ export function writer(options?: Options) {
 export function factory(url: string) {
     return {
         /// * `reader = factory.reader()`
-        reader: () => {
+        reader: async () => {
             return module.exports.reader(url.substring(url.indexOf(':') + 1));
         },
         /// * `writer = factory.writer()`
-        writer: () => {
+        writer: async () => {
             return module.exports.writer();
         },
     };

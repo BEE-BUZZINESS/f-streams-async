@@ -3,7 +3,7 @@
 ///
 /// `import { multipartParser, multipartFormatter }from 'f-streams'`
 ///
-import { handshake } from 'f-promise';
+import { handshake } from 'f-promise-async';
 import * as generic from '../devices/generic';
 import * as binary from '../helpers/binary';
 import { Reader } from '../reader';
@@ -36,14 +36,14 @@ function latin1toUtf8(text: string): string {
     return Buffer.from(text, 'binary').toString('utf8');
 }
 
-function mixedParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer: Writer<any>) => void {
+function mixedParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer: Writer<any>) => Promise<void> {
     const boundary = ct.boundary;
-    return (reader: Reader<Buffer>, writer: Writer<any>) => {
+    return async (reader: Reader<Buffer>, writer: Writer<any>) => {
         const binReader = binary.reader(reader);
         const hk = handshake();
         while (true) {
             let partEnded = false;
-            const buf = binReader.readData(2048);
+            const buf = await binReader.readData(2048);
             if (!buf || !buf.length) return;
             const str = buf.toString('binary');
             let i = str.indexOf(boundary);
@@ -57,10 +57,10 @@ function mixedParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer:
             i = str.indexOf('\n', i);
             binReader.unread(buf.length - i - 1);
 
-            const read = () => {
+            const read = async () => {
                 if (partEnded) return undefined;
                 const len = Math.max(boundary.length, 256);
-                const bbuf = binReader.readData(32 * len);
+                const bbuf = await binReader.readData(32 * len);
                 if (!bbuf || !bbuf.length) {
                     hk.notify();
                     partEnded = true;
@@ -89,40 +89,40 @@ function mixedParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer:
             };
             const partReader = generic.reader(read);
             partReader.headers = headers;
-            writer.write(partReader);
-            hk.wait();
+            await writer.write(partReader);
+            await hk.wait();
         }
     };
 }
 
 function mixedFormatter(ct: MultipartContentType) {
     const boundary = ct.boundary;
-    return (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => {
+    return async (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => {
         let part: Reader<Buffer> | undefined;
-        while ((part = reader.read()) !== undefined) {
+        while ((part = await reader.read()) !== undefined) {
             const headers = part.headers;
             if (!headers) throw new Error('part does not have headers');
-            Object.keys(part.headers).forEach(key => {
-                writer.write(Buffer.from(key + ': ' + headers[key] + '\n', 'utf8'));
-            });
-            writer.write(Buffer.from('\n' + boundary + '\n'));
+            for (const key of Object.keys(part.headers)) {
+                await writer.write(Buffer.from(key + ': ' + headers[key] + '\n', 'utf8'));
+            }
+            await writer.write(Buffer.from('\n' + boundary + '\n'));
             // cannot use pipe because pipe writes undefined at end.
-            part.forEach(data => {
-                writer.write(data);
+            await part.forEach(async data => {
+                await writer.write(data);
             });
-            writer.write(Buffer.from('\n' + boundary + '\n'));
+            await writer.write(Buffer.from('\n' + boundary + '\n'));
         }
     };
 }
 
-function formDataParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer: Writer<any>) => void {
+function formDataParser(ct: MultipartContentType): (reader: Reader<Buffer>, writer: Writer<any>) => Promise<void> {
     const boundary = '--' + ct.boundary;
-    return (reader: Reader<Buffer>, writer: Writer<any>) => {
+    return async (reader: Reader<Buffer>, writer: Writer<any>) => {
         const binReader = binary.reader(reader);
         const hk = handshake();
         while (true) {
             let partEnded = false;
-            const buf = binReader.readData(2048);
+            const buf = await binReader.readData(2048);
             if (!buf || !buf.length) return;
             const str = buf.toString('binary');
 
@@ -165,10 +165,10 @@ function formDataParser(ct: MultipartContentType): (reader: Reader<Buffer>, writ
 
             binReader.unread(buf.length - beginOfData);
 
-            const read = () => {
+            const read = async () => {
                 if (partEnded) return undefined;
                 const len = Math.max(boundary.length, 256);
-                const bbuf = binReader.readData(32 * len);
+                const bbuf = await binReader.readData(32 * len);
                 if (!bbuf || !bbuf.length) {
                     // conditional notify: allow final read to be called twice
                     if (!partEnded) {
@@ -204,35 +204,35 @@ function formDataParser(ct: MultipartContentType): (reader: Reader<Buffer>, writ
             };
             const partReader = generic.reader(read);
             partReader.headers = headers;
-            writer.write(partReader);
-            hk.wait();
+            await writer.write(partReader);
+            await hk.wait();
         }
     };
 }
 
-function formDataFormatter(ct: MultipartContentType): (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => void {
+function formDataFormatter(ct: MultipartContentType): (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => Promise<void> {
     const boundary = '--' + ct.boundary;
     if (!boundary) throw new Error('multipart boundary missing');
     const CR_LF = '\r\n';
 
-    return (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => {
+    return async (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => {
         let part: Reader<any> | undefined;
-        while ((part = reader.read()) !== undefined) {
-            writer.write(Buffer.from(boundary + CR_LF));
+        while ((part = await reader.read()) !== undefined) {
+            await writer.write(Buffer.from(boundary + CR_LF));
 
             const headers = part.headers;
             if (!headers) throw new Error('part does not have headers');
-            Object.keys(part.headers).forEach(key => {
-                writer.write(Buffer.from(key + ': ' + headers[key] + CR_LF, 'utf8'));
-            });
+            for (const key of Object.keys(part.headers)) {
+                await writer.write(Buffer.from(key + ': ' + headers[key] + CR_LF, 'utf8'));
+            }
             // cannot use pipe because pipe writes undefined at end.;
-            writer.write(Buffer.from(CR_LF));
-            part.forEach(data => {
-                writer.write(data);
+            await writer.write(Buffer.from(CR_LF));
+            await part.forEach(async data => {
+                await writer.write(data);
             });
-            writer.write(Buffer.from(CR_LF));
+            await writer.write(Buffer.from(CR_LF));
         }
-        writer.write(Buffer.from(boundary + '--'));
+        await writer.write(Buffer.from(boundary + '--'));
     };
 }
 
@@ -244,7 +244,7 @@ export type ParserOptions = {
     [name: string]: string;
 };
 
-export function parser(options: ParserOptions): (reader: Reader<Buffer>, writer: Writer<any>) => void {
+export function parser(options: ParserOptions): (reader: Reader<Buffer>, writer: Writer<any>) => Promise<void> {
     const ct = parseContentType(options && options['content-type']);
     if (!ct || !ct.boundary) throw new Error('multipart boundary missing');
 
@@ -269,7 +269,7 @@ export interface FormatterOptions {
 
 export function formatter(
     options?: FormatterOptions,
-): (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => void {
+): (reader: Reader<Reader<Buffer>>, writer: Writer<Buffer>) => Promise<void> {
     const ct = parseContentType(options && options['content-type']);
     if (!ct || !ct.boundary) throw new Error('multipart boundary missing');
 

@@ -1,61 +1,59 @@
 import { assert } from 'chai';
-import { setup } from 'f-mocha';
-import { run, wait } from 'f-promise';
+import { run, wait } from 'f-promise-async';
 import * as fs from 'fs';
 import { bufferReader, linesFormatter, linesParser, stringReader, stringWriter, textFileReader } from '../..';
-setup();
 
 const { equal, ok, strictEqual, deepEqual } = assert;
 
 const inputFile = require('os').tmpdir() + '/jsonInput.json';
 const outputFile = require('os').tmpdir() + '/jsonOutput.json';
 
-function nodeStream(text: string) {
-    wait(cb => fs.writeFile(inputFile, text, 'utf8', cb));
+async function nodeStream(text: string) {
+    await wait(cb => fs.writeFile(inputFile, text, 'utf8', cb));
     return textFileReader(inputFile);
 }
 
 describe(module.id, () => {
-    it('empty', () => {
-        const stream = nodeStream('').transform(linesParser());
-        strictEqual(stream.read(), undefined, 'undefined');
+    it('empty', async () => {
+        const stream = (await nodeStream('')).transform(linesParser());
+        strictEqual(await stream.read(), undefined, 'undefined');
     });
 
-    it('non empty line', () => {
-        const stream = nodeStream('a').transform(linesParser());
-        strictEqual(stream.read(), 'a', 'a');
-        strictEqual(stream.read(), undefined, 'undefined');
+    it('non empty line', async () => {
+        const stream = (await nodeStream('a')).transform(linesParser());
+        strictEqual(await stream.read(), 'a', 'a');
+        strictEqual(await stream.read(), undefined, 'undefined');
     });
 
-    it('only newline', () => {
-        const stream = nodeStream('\n').transform(linesParser());
-        strictEqual(stream.read(), '', 'empty line');
-        strictEqual(stream.read(), undefined, 'undefined');
+    it('only newline', async () => {
+        const stream = (await nodeStream('\n')).transform(linesParser());
+        strictEqual(await stream.read(), '', 'empty line');
+        strictEqual(await stream.read(), undefined, 'undefined');
     });
 
-    it('mixed', () => {
-        const stream = nodeStream('abc\n\ndef\nghi').transform(linesParser());
-        strictEqual(stream.read(), 'abc', 'abc');
-        strictEqual(stream.read(), '', 'empty line');
-        strictEqual(stream.read(), 'def', 'def');
-        strictEqual(stream.read(), 'ghi', 'ghi');
-        strictEqual(stream.read(), undefined, 'undefined');
+    it('mixed', async () => {
+        const stream = (await nodeStream('abc\n\ndef\nghi')).transform(linesParser());
+        strictEqual(await stream.read(), 'abc', 'abc');
+        strictEqual(await stream.read(), '', 'empty line');
+        strictEqual(await stream.read(), 'def', 'def');
+        strictEqual(await stream.read(), 'ghi', 'ghi');
+        strictEqual(await stream.read(), undefined, 'undefined');
     });
 
-    it('roundtrip', () => {
+    it('roundtrip', async () => {
         const writer = stringWriter();
         const text = 'abc\n\ndef\nghi';
-        stringReader(text, 2)
+        await stringReader(text, 2)
             .transform(linesParser())
             .transform(linesFormatter())
             .pipe(writer);
         strictEqual(writer.toString(), text, text);
     });
 
-    it('binary input', () => {
+    it('binary input', async () => {
         const writer = stringWriter();
         const text = 'abc\n\ndef\nghi';
-        bufferReader(Buffer.from(text, 'utf8'))
+        await bufferReader(Buffer.from(text, 'utf8'))
             .transform(linesParser())
             .transform(linesFormatter())
             .pipe(writer);

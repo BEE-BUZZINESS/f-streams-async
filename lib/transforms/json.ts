@@ -62,7 +62,7 @@ import { Writer } from '../writer';
 ///   - `reviver`: reviver function which is passed to [JSON.parse](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)
 export interface ParserOptions {
     size?: number;
-    encoding?: string;
+    encoding?: BufferEncoding;
     reviver?: (key: any, value: any) => any;
     unbounded?: boolean;
 }
@@ -70,13 +70,13 @@ export interface ParserOptions {
 export function parser(options?: ParserOptions) {
     const opts = options || {};
 
-    return (reader: Reader<string | Buffer>, writer: Writer<any>) => {
-        function read() {
-            const data = reader.read();
+    return async (reader: Reader<string | Buffer>, writer: Writer<any>) => {
+        async function read() {
+            const data = await reader.read();
             return Buffer.isBuffer(data) ? data.toString(opts.encoding || 'utf8') : data;
         }
         let pos = 0,
-            chunk = read(),
+            chunk = await read(),
             beg: number | undefined,
             collected = '',
             line = 1,
@@ -89,39 +89,39 @@ export function parser(options?: ParserOptions) {
             throw new Error(line + ': ' + msg + ' near ' + (chunk ? chunk.substring(pos, pos + 20) : '<EOF>'));
         }
 
-        function peekch() {
+        async function peekch() {
             if (!chunk) return undefined;
             if (pos >= chunk.length) {
                 if (beg !== undefined) {
                     collected += chunk.substring(beg);
                     beg = 0;
                 }
-                chunk = read();
+                chunk = await read();
                 if (!chunk) return undefined;
                 pos = 0;
             }
             return chunk[pos];
         }
 
-        function skipSpaces() {
+        async function skipSpaces() {
             let c: string | undefined;
-            while ((c = peekch()) !== undefined && /^\s/.test(c)) {
+            while ((c = await peekch()) !== undefined && /^\s/.test(c)) {
                 line += c === '\n' ? 1 : 0;
                 pos++;
             }
             return c;
         }
 
-        function flush() {
+        async function flush() {
             if (chunk === undefined || beg === undefined) return;
             collected += chunk.substring(beg, pos);
             const val = JSON.parse(collected, opts.reviver);
-            writer.write(val);
+            await writer.write(val);
             beg = undefined;
             collected = '';
         }
 
-        ch = skipSpaces();
+        ch = await skipSpaces();
         if (!opts.unbounded) {
             if (ch !== '[') throw error('expected [, got ' + ch);
             pos++;
@@ -130,7 +130,7 @@ export function parser(options?: ParserOptions) {
         }
 
         while (true) {
-            ch = peekch();
+            ch = await peekch();
             if (escape) {
                 escape = false;
             } else if (quoted) {
@@ -160,14 +160,14 @@ export function parser(options?: ParserOptions) {
                         depth--;
                         if (depth === 0) {
                             if (opts.unbounded) throw error('unexpected ]');
-                            if (beg !== undefined) flush();
+                            if (beg !== undefined) await flush();
                             return;
                         }
                         break;
                     case ',':
                         if (depth === 1) {
                             if (beg === undefined) throw error('unexpected comma');
-                            flush();
+                            await flush();
                         }
                         break;
                     default:
@@ -193,13 +193,13 @@ export interface FormatterOptions {
 
 export function formatter(options?: FormatterOptions) {
     const opts = options || {};
-    return (reader: Reader<any>, writer: Writer<string>) => {
+    return async (reader: Reader<any>, writer: Writer<string>) => {
         if (!opts.unbounded) writer.write('[');
-        reader.forEach((obj, i) => {
-            if (i > 0) writer.write(',\n');
-            writer.write(JSON.stringify(obj, opts.replacer, opts.space));
+        await reader.forEach(async (obj, i) => {
+            if (i > 0) await writer.write(',\n');
+            await writer.write(JSON.stringify(obj, opts.replacer, opts.space));
         });
-        writer.write(opts.unbounded ? ',' : ']');
-        writer.write(undefined);
+        await writer.write(opts.unbounded ? ',' : ']');
+        await writer.write(undefined);
     };
 }

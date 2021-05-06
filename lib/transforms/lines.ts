@@ -11,18 +11,18 @@ import { Writer } from '../writer';
 
 export interface ParserOptions {
     sep?: string;
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
-export function parser(options?: ParserOptions): (reader: Reader<string | Buffer>, writer: Writer<string>) => void {
+export function parser(options?: ParserOptions): (reader: Reader<string | Buffer>, writer: Writer<string>) =>  Promise<void> {
     const opts = options || {};
 
     function clean(line: string) {
         return !opts.sep && line[line.length - 1] === '\r' ? line.substring(0, line.length - 1) : line;
     }
-    return (reader: Reader<string | Buffer>, writer: Writer<string>) => {
+    return async (reader: Reader<string | Buffer>, writer: Writer<string>) => {
         let remain = '';
-        reader.forEach(chunk => {
+        await reader.forEach(async chunk => {
             let str: string;
             if (typeof chunk === 'string') str = chunk;
             else if (Buffer.isBuffer(chunk)) str = chunk.toString(opts.encoding || 'utf8');
@@ -30,15 +30,15 @@ export function parser(options?: ParserOptions): (reader: Reader<string | Buffer
             else throw new Error('bad input: ' + typeof chunk);
             const lines = str.split(opts.sep || '\n');
             if (lines.length > 1) {
-                writer.write(clean(remain + lines[0]));
+                await writer.write(clean(remain + lines[0]));
                 let i = 1;
-                for (; i < lines.length - 1; i++) writer.write(clean(lines[i]));
+                for (; i < lines.length - 1; i++) await writer.write(clean(lines[i]));
                 remain = lines[i];
             } else {
                 remain += lines[0];
             }
         });
-        if (remain) writer.write(remain);
+        if (remain) await writer.write(remain);
     };
 }
 
@@ -54,14 +54,14 @@ export interface FormatterOptions {
 export function formatter(options?: FormatterOptions) {
     const opts = options || {};
     const eol = opts.eol || '\n';
-    return (reader: Reader<string>, writer: Writer<string>) => {
+    return async (reader: Reader<string>, writer: Writer<string>) => {
         if (opts.extra) {
-            reader.forEach(line => {
-                writer.write(line + eol);
+            await reader.forEach(async line => {
+                await writer.write(line + eol);
             });
         } else {
-            reader.forEach((line, i) => {
-                writer.write(i > 0 ? eol + line : line);
+            await reader.forEach(async (line, i) => {
+                await writer.write(i > 0 ? eol + line : line);
             });
         }
     };

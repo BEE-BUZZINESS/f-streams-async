@@ -1,8 +1,5 @@
 import { assert } from 'chai';
-import { setup } from 'f-mocha';
-import { run, wait } from 'f-promise';
 import { predicate, predicateBuilder } from '../..';
-setup();
 
 const { equal, ok } = assert;
 

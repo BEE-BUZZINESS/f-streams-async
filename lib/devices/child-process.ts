@@ -4,7 +4,7 @@
 /// `import { childProcessReader, childProcessWriter} from 'f-streams'`
 ///
 import { ChildProcess } from 'child_process';
-import { wait } from 'f-promise';
+import { wait } from 'f-promise-async';
 import { stringify } from '../mappers/convert';
 import { Reader } from '../reader';
 import { parser as linesParser } from '../transforms/lines';
@@ -18,7 +18,7 @@ import * as node from './node';
 ///   https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md
 export interface ReaderOptions {
     acceptCode?: (code: number) => boolean;
-    encoding?: string;
+    encoding?: BufferEncoding;
     dataHandler?: (reader: Reader<string | Buffer>) => Reader<string | Buffer>;
     errorHandler?: (reader: Reader<string | Buffer>) => Reader<string | Buffer>;
     errorPrefix?: string;
@@ -31,8 +31,8 @@ export function reader(proc: ChildProcess, options?: ReaderOptions) {
     proc.on('close', (ec: number) => {
         closed = true;
         if (ec === -1) {
-            proc.stdout.emit('end');
-            proc.stderr.emit('end');
+            proc.stdout?.emit('end');
+            proc.stderr?.emit('end');
         }
         if (ec && !(opts.acceptCode && opts.acceptCode(ec))) {
             err = new Error('process exited with code:' + ec);
@@ -47,18 +47,18 @@ export function reader(proc: ChildProcess, options?: ReaderOptions) {
     proc.on('error', (e: NodeJS.ErrnoException) => {
         err = err || e;
     });
-    let stdout: Reader<string | Buffer> = node.reader(proc.stdout, opts);
-    let stderr: Reader<string | Buffer> = node.reader(proc.stderr, opts);
+    let stdout: Reader<string | Buffer> = node.reader(proc.stdout!, opts);
+    let stderr: Reader<string | Buffer> = node.reader(proc.stderr!, opts);
     // node does not send close event if we remove all listeners on stdin and stdout
     // so we disable the stop methods and we call stop explicitly after the close.
     const stops = [stdout.stop.bind(stdout), stderr.stop.bind(stderr)];
-    stdout.stop = stderr.stop = () => {};
-    function stopStreams(arg?: any) {
+    stdout.stop = stderr.stop = async () => {};
+    async function stopStreams(arg?: any) {
         stops.forEach(stop => {
             stop(arg);
         });
     }
-    if (opts.encoding !== 'buffer') {
+    if ((opts.encoding as any) !== 'buffer') {
         stdout = stdout.map(stringify()).transform(linesParser());
         stderr = stderr.map(stringify()).transform(linesParser());
     }
@@ -71,9 +71,9 @@ export function reader(proc: ChildProcess, options?: ReaderOptions) {
         });
     }
     const rd = stdout.join(stderr);
-    return generic.reader(function read() {
+    return generic.reader(async function read() {
         if (err) throw err;
-        const data = rd.read();
+        const data = await rd.read();
         if (data !== undefined) return data;
         // reached end of stream - worry about close event now.
         if (closed) {
@@ -81,10 +81,10 @@ export function reader(proc: ChildProcess, options?: ReaderOptions) {
             if (err) throw err;
         } else {
             // wait for the close event
-            wait(cb => {
+            await wait(cb => {
                 closeCb = cb;
             });
-            stopStreams();
+            await stopStreams();
         }
         return undefined;
     }, stopStreams);
@@ -97,5 +97,5 @@ export function reader(proc: ChildProcess, options?: ReaderOptions) {
 export interface WriterOptions extends node.NodeWriterOptions {}
 
 export function writer(proc: ChildProcess, options: WriterOptions) {
-    return node.writer(proc.stdin, options);
+    return node.writer(proc.stdin!, options);
 }

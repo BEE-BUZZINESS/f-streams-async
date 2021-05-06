@@ -10,7 +10,7 @@
 ///   with an optional separator at the end.
 export interface ParserOptions {
     sep?: string;
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
 export function parse<T>(options?: ParserOptions) {

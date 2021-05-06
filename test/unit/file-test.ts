@@ -1,28 +1,27 @@
 import { assert } from 'chai';
-import { setup } from 'f-mocha';
-import { wait } from 'f-promise';
+import { wait } from 'f-promise-async';
 import * as fs from 'fs';
 import { lsof } from 'list-open-files';
 import { binaryFileReader, binaryFileWriter, genericReader, textFileReader, textFileWriter } from '../..';
 
-setup();
+const { ok, strictEqual } = assert;
 
 describe(module.id, () => {
     let tmpDir: string;
     let tmpFilePath: string;
-    before(() => {
-        tmpDir = wait(cb => fs.mkdtemp('/tmp/f-streams-test-', cb));
+    before(async () => {
+        tmpDir = await wait(cb => fs.mkdtemp('/tmp/f-streams-test-', cb));
         tmpFilePath = tmpDir + '/file.data';
     });
 
-    after(() => {
-        wait(cb => fs.rmdir(tmpDir, cb));
+    after(async () => {
+        await wait(cb => fs.rmdir(tmpDir, cb));
     });
 
-    function writeBinaryFile(filePath: string, nbChunk32k: number) {
+    async function writeBinaryFile(filePath: string, nbChunk32k: number) {
         let chunkIndex = 0;
         const writer = binaryFileWriter(filePath);
-        genericReader<Buffer>(() => {
+        await genericReader<Buffer>(async () => {
             if (chunkIndex === nbChunk32k) {
                 return;
             }
@@ -31,10 +30,10 @@ describe(module.id, () => {
         }).pipe(writer);
     }
 
-    function writeTextFile(filePath: string, nbChunk32k: number) {
+    async function writeTextFile(filePath: string, nbChunk32k: number) {
         let chunkIndex = 0;
         const writer = textFileWriter(filePath);
-        genericReader<string>(() => {
+        await genericReader<string>(async () => {
             if (chunkIndex === nbChunk32k) {
                 return;
             }
@@ -43,30 +42,30 @@ describe(module.id, () => {
         }).pipe(writer);
     }
 
-    function assertTmpFileNotOpen() {
-        const openFiles = wait(lsof())[0].files;
+    async function assertTmpFileNotOpen() {
+        const openFiles = (await lsof())[0].files;
         const tmpFileOpen = openFiles.find(file => file.name === tmpFilePath);
         assert.isUndefined(tmpFileOpen, `Temporary file ${tmpFilePath} is still open`);
     }
 
     describe('binaryFileWriter', () => {
 
-        afterEach(() => {
-            wait(cb => fs.unlink(tmpFilePath, cb));
+        afterEach(async () => {
+            await wait(cb => fs.unlink(tmpFilePath, cb));
         });
 
-        it('end() should close fd', () => {
-            writeBinaryFile(tmpFilePath, 4);
+        it('end() should close fd', async () => {
+            await writeBinaryFile(tmpFilePath, 4);
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
 
-        it('stop() should close fd', () => {
+        it('stop() should close fd', async () => {
             let chunkIndex = 0;
 
             const writer = binaryFileWriter(tmpFilePath);
             try {
-                genericReader<Buffer>(() => {
+                await genericReader<Buffer>(async () => {
                     if (chunkIndex === 3) {
                         throw new Error('file troncated');
                     }
@@ -74,61 +73,64 @@ describe(module.id, () => {
                     return Buffer.alloc(32 * 1024);
                 }).pipe(writer);
             } catch (e) {
-                writer.stop(e);
+                await writer.stop(e);
             }
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
     });
 
-    describe('binaryFileReader', () => {
-        before(() => {
-            writeBinaryFile(tmpFilePath, 4);
+    describe('binaryFileReader', async () => {
+        before(async () => {
+            await writeBinaryFile(tmpFilePath, 4);
         });
 
-        after(() => {
-            wait(cb => fs.unlink(tmpFilePath, cb));
+        after(async () => {
+            await wait(cb => fs.unlink(tmpFilePath, cb));
         });
 
-        it('end() should close fd', () => {
-            binaryFileReader(tmpFilePath).readAll();
+        it('end() should close fd', async () => {
+            await binaryFileReader(tmpFilePath).readAll();
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
 
-        it('stop() should close fd', () => {
+        it('stop() should close fd', async () => {
             const reader = binaryFileReader(tmpFilePath);
-            assert.throws(() => {
-                reader.forEach((chunk: Buffer, index: number) => {
+            try {
+                await reader.forEach(async (chunk: Buffer, index: number) => {
                     if (index === 1) {
-                        reader.stop(new Error('read stream error'));
+                        await reader.stop(new Error('read stream error'));
                         return;
                     }
                 });
-            }, /read stream error/);
+                ok(false)
+            } catch (ex) {
+                strictEqual(ex.message, 'read stream error');
+            }
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
     });
 
-    describe('textFileWriter', () => {
+    describe('textFileWriter', async () => {
 
-        afterEach(() => {
-            wait(cb => fs.unlink(tmpFilePath, cb));
+        afterEach(async () => {
+            await wait(cb => fs.unlink(tmpFilePath, cb));
         });
 
-        it('end() should close fd', () => {
-            writeTextFile(tmpFilePath, 4);
+        it('end() should close fd', async () => {
+            await writeTextFile(tmpFilePath, 4);
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
 
-        it('stop() should close fd', () => {
+        it('stop() should close fd', async () => {
             let chunkIndex = 0;
 
             const writer = textFileWriter(tmpFilePath);
             try {
-                genericReader<string>(() => {
+                await genericReader<string>(async () => {
                     if (chunkIndex === 3) {
                         throw new Error('file troncated');
                     }
@@ -136,40 +138,43 @@ describe(module.id, () => {
                     return Buffer.alloc(32 * 1024).toString();
                 }).pipe(writer);
             } catch (e) {
-                writer.stop(e);
+                await writer.stop(e);
             }
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
     });
 
     describe('textFileReader', () => {
-        before(() => {
-            writeTextFile(tmpFilePath, 4);
+        before(async () => {
+            await writeTextFile(tmpFilePath, 4);
         });
 
-        after(() => {
-            wait(cb => fs.unlink(tmpFilePath, cb));
+        after(async () => {
+            await wait(cb => fs.unlink(tmpFilePath, cb));
         });
 
-        it('end() should close fd', () => {
-            textFileReader(tmpFilePath).readAll();
+        it('end() should close fd', async () => {
+            await textFileReader(tmpFilePath).readAll();
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
 
-        it('stop() should close fd', () => {
+        it('stop() should close fd', async () => {
             const reader = textFileReader(tmpFilePath);
-            assert.throws(() => {
-                reader.forEach((chunk: string, index: number) => {
+            try {
+                await reader.forEach(async (chunk: string, index: number) => {
                     if (index === 1) {
-                        reader.stop(new Error('read stream error'));
+                        await reader.stop(new Error('read stream error'));
                         return;
                     }
                 });
-            }, /read stream error/);
+                ok(false)
+            } catch (ex) {
+                strictEqual(ex.message, 'read stream error');
+            }
 
-            assertTmpFileNotOpen();
+            await assertTmpFileNotOpen();
         });
     });
 });

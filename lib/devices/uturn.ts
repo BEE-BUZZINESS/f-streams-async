@@ -1,4 +1,4 @@
-import { wait } from 'f-promise';
+import { wait } from 'f-promise-async';
 import { Reader } from '../reader';
 import * as stopException from '../stop-exception';
 import { nextTick } from '../util';
@@ -52,9 +52,9 @@ export function create<T>(): Uturn<T> {
 
     const uturn = {
         reader: new Reader(
-            () =>
-                wait<T>(cb => {
-                    nextTick();
+            async () =>
+                await wait<T>(async cb => {
+                    await nextTick();
                     tracer && tracer(id, 'READ', state, pendingData);
                     const st = state;
                     switch (st) {
@@ -89,9 +89,9 @@ export function create<T>(): Uturn<T> {
                             break;
                     }
                 }),
-            arg =>
-                wait(cb => {
-                    nextTick();
+            async arg =>
+                await wait(async cb => {
+                    await nextTick();
                     error = error || stopException.make(arg);
                     tracer && tracer(id, 'STOP READER', state, arg);
                     const st = state;
@@ -126,9 +126,9 @@ export function create<T>(): Uturn<T> {
                 }),
         ),
         writer: new Writer<T>(
-            data =>
-                wait<Writer<T>>(cb => {
-                    nextTick();
+            async data =>
+                await wait<Writer<T>>(async cb => {
+                    await nextTick();
                     tracer && tracer(id, 'WRITE', state, data);
                     const st = state;
                     switch (st) {
@@ -161,9 +161,9 @@ export function create<T>(): Uturn<T> {
                             break;
                     }
                 }),
-            arg =>
-                wait(cb => {
-                    nextTick();
+            async arg =>
+                await wait(async cb => {
+                    await nextTick();
                     tracer && tracer(id, 'STOP WRITER', state, arg);
                     error = error || stopException.make(arg);
                     const st = state;

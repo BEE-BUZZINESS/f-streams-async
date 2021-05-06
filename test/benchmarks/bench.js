@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('fs');
-const f = require('f-streams');
+const f = require('../../build');
 
 function bench(name, fn) {
     var max = 1;

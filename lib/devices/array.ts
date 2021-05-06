@@ -9,8 +9,8 @@ export interface Options {
 export class ArrayWriter<T> extends Writer<T> {
     values: T[];
     constructor(options: Options) {
-        super((value: T) => {
-            if (!options.sync) nextTick();
+        super(async (value: T) => {
+            if (!options.sync) await nextTick();
             if (value !== undefined) this.values.push(value);
             return this;
         });
@@ -36,8 +36,8 @@ export class ArrayWriter<T> extends Writer<T> {
 export function reader<T>(array: T[], options?: Options) {
     const opts = options || {};
     const values = array.slice(0);
-    return new Reader<T>(function() {
-        if (!opts.sync) nextTick();
+    return new Reader<T>(async function() {
+        if (!opts.sync) await nextTick();
         return values.shift();
     });
 }

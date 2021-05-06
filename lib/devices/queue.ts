@@ -1,4 +1,4 @@
-import { Queue, QueueOptions } from 'f-promise';
+import { Queue, QueueOptions } from 'f-promise-async';
 import { Reader } from '../reader';
 import { Writer } from '../writer';
 import * as generic from './generic';
@@ -31,8 +31,10 @@ export class StreamedQueue<T> extends Queue<T> {
 
     constructor(options?: QueueOptions | number) {
         super(options);
-        this.reader = generic.reader<T>(() => this.read(), () => this.end());
-        this.writer = generic.writer<T>(val => this.write(val));
+        this.reader = generic.reader<T>(async () => await this.read(), async () => this.end());
+        this.writer = generic.writer<T>(async val => {
+            await this.write(val)
+        });
     }
 }
 

@@ -49,17 +49,17 @@ export class Reader extends BaseReader<Buffer> {
         // override read for compat
         this.read = this.readData;
     }
-    readData(len?: number, peekOnly?: boolean): Buffer | undefined {
+    async readData(len?: number, peekOnly?: boolean): Promise<Buffer | undefined> {
         if (this.buf === undefined) return undefined;
         if (len === undefined) {
             if (this.pos < this.buf.length) return this.readData(this.buf.length - this.pos, peekOnly);
             else {
-                this.buf = this.reader.read();
+                this.buf = await this.reader.read();
                 this.pos = this.buf && !peekOnly ? this.buf.length : 0;
                 return this.buf;
             }
         }
-        const l = this.ensure(len);
+        const l = await this.ensure(len);
         if (l === 0 && len > 0) return undefined;
         const result = this.buf.slice(this.pos, this.pos + l);
         if (!peekOnly) this.pos += l;
@@ -67,14 +67,14 @@ export class Reader extends BaseReader<Buffer> {
     }
 
     // internal API
-    ensure(len: number) {
+    async ensure(len: number) {
         if (this.buf === undefined) return 0;
         if (this.pos + len <= this.buf.length) return len;
         let got = this.buf.length - this.pos;
         const bufs = got ? [this.buf.slice(this.pos)] : [];
         this.pos = 0;
         while (got < len) {
-            const buf = this.reader.read();
+            const buf = await this.reader.read();
             if (buf === undefined) {
                 if (bufs.length === 0) return 0;
                 else break;
@@ -90,15 +90,15 @@ export class Reader extends BaseReader<Buffer> {
     /// * `buf = reader.peek(len)`
     ///   Same as `read` but does not advance the read pointer.
     ///   Another `read` would read the same data again.
-    peek(len: number) {
-        return this.readData(len, true);
+    async peek(len: number) {
+        return await this.readData(len, true);
     }
 
     ///
     /// * `reader.peekAll()`
     ///   Same as `readAll` but does not advance the read pointer.
-    peekAll(): Buffer | undefined {
-        this.buf = this.readAll() as Buffer;
+    async peekAll(): Promise<Buffer | undefined> {
+        this.buf = await this.readAll() as Buffer;
         this.pos = 0;
         return this.buf;
     }
@@ -133,8 +133,8 @@ export class Reader extends BaseReader<Buffer> {
 /// * `val = reader.peekDouble()`
 ///   Specialized peekers for numbers.
 function numberReader(name: string, len: number, peekOnly?: boolean) {
-    return function(this: Reader) {
-        const got = this.ensure(len);
+    return async function(this: Reader) {
+        const got = await this.ensure(len);
         if (got === 0) return undefined;
         if (got < len) throw new Error('unexpected EOF: expected ' + len + ', got ' + got);
         const result = (this.buf as any)[name](this.pos);
@@ -177,10 +177,10 @@ export class Writer extends BaseWriter<Buffer> {
     pos: number;
     buf: Buffer;
     constructor(wr: BaseWriter<Buffer>, options?: WriterOptions) {
-        super((buf: Buffer) => {
-            this.writeDate(buf);
+        super(async (buf: Buffer) => {
+            await this.writeDate(buf);
             return this;
-        }, (arg?: any) => wr.stop(arg));
+        }, async (arg?: any) => wr.stop(arg));
         options = options || {};
         this.writer = wr;
         this.options = options;
@@ -191,17 +191,17 @@ export class Writer extends BaseWriter<Buffer> {
     ///
     /// * `writer.flush()`
     ///   Flushes the buffer to the wrapped writer.
-    flush() {
-        if (this.pos > 0) this.writer.write(this.buf.slice(0, this.pos));
+    async flush() {
+        if (this.pos > 0) await this.writer.write(this.buf.slice(0, this.pos));
         // reallocate the buffer because existing buffer belongs to this.writer now.
         this.buf = Buffer.alloc(this.buf.length);
         this.pos = 0;
     }
 
     // internal call
-    ensure(len: number) {
+    async ensure(len: number) {
         if (this.pos + len > this.buf.length) {
-            this.flush();
+            await this.flush();
             if (len > this.buf.length) this.buf = Buffer.alloc(len);
         }
     }
@@ -211,12 +211,12 @@ export class Writer extends BaseWriter<Buffer> {
     ///   Writes `buf`.
     ///   Note: writes are buffered.
     ///   Use the `flush()` call if you need to flush before the end of the stream.
-    writeDate(buf: Buffer) {
+    async writeDate(buf: Buffer) {
         if (buf === undefined || buf.length > this.buf.length) {
-            this.flush();
-            this.writer.write(buf);
+            await this.flush();
+            await this.writer.write(buf);
         } else {
-            this.ensure(buf.length);
+            await this.ensure(buf.length);
             buf.copy(this.buf, this.pos);
             this.pos += buf.length;
         }
@@ -234,8 +234,8 @@ export class Writer extends BaseWriter<Buffer> {
 /// * `writer.writeDouble(val)`
 ///   Specialized writers for numbers.
 function numberWriter(name: string, len: number) {
-    return function(this: Writer, val: number) {
-        this.ensure(len);
+    return async function(this: Writer, val: number) {
+        await this.ensure(len);
         (this.buf as any)[name](val, this.pos);
         this.pos += len;
     };
@@ -292,42 +292,42 @@ const writerBE = endianWriter(['write'], 'BE');
 
 // Interfaces to get the specialized methods in TypeScript
 export interface BinaryReader extends Reader {
-    read(len?: number): Buffer | undefined;
-    readInt8(): number;
-    peekInt8(): number;
-    unreadInt8(): void;
-    readUInt8(): number;
-    peekUInt8(): number;
-    unreadUInt8(): void;
-    readInt16(): number;
-    peekInt16(): number;
-    unreadInt16(): void;
-    readUInt16(): number;
-    peekUInt16(): number;
-    unreadUInt16(): void;
-    readInt32(): number;
-    peekInt32(): number;
-    unreadInt32(): void;
-    readUInt32(): number;
-    peekUInt32(): number;
-    unreadUInt32(): void;
-    readFloat(): number;
-    peekFloat(): number;
-    unreadFloat(): void;
-    readDouble(): number;
-    peekDouble(): number;
-    unreadDouble(): void;
+    read(len?: number): Promise<Buffer | undefined>;
+    readInt8(): Promise<number>;
+    peekInt8(): Promise<number>;
+    unreadInt8(): Promise<void>;
+    readUInt8(): Promise<number>;
+    peekUInt8(): Promise<number>;
+    unreadUInt8(): Promise<void>;
+    readInt16(): Promise<number>;
+    peekInt16(): Promise<number>;
+    unreadInt16(): Promise<void>;
+    readUInt16(): Promise<number>;
+    peekUInt16(): Promise<number>;
+    unreadUInt16(): Promise<void>;
+    readInt32(): Promise<number>;
+    peekInt32(): Promise<number>;
+    unreadInt32(): Promise<void>;
+    readUInt32(): Promise<number>;
+    peekUInt32(): Promise<number>;
+    unreadUInt32(): Promise<void>;
+    readFloat(): Promise<number>;
+    peekFloat(): Promise<number>;
+    unreadFloat(): Promise<void>;
+    readDouble(): Promise<number>;
+    peekDouble(): Promise<number>;
+    unreadDouble(): Promise<void>;
 }
 
 export interface BinaryWriter extends Writer {
-    writeInt8(val: number): void;
-    writeUInt8(val: number): void;
-    writeInt16(val: number): void;
-    writeUInt16(val: number): void;
-    writeInt32(val: number): void;
-    writeUInt32(val: number): void;
-    writeFloat(val: number): void;
-    writeDouble(val: number): void;
+    writeInt8(val: number): Promise<void>;
+    writeUInt8(val: number): Promise<void>;
+    writeInt16(val: number): Promise<void>;
+    writeUInt16(val: number): Promise<void>;
+    writeInt32(val: number): Promise<void>;
+    writeUInt32(val: number): Promise<void>;
+    writeFloat(val: number): Promise<void>;
+    writeDouble(val: number): Promise<void>;
 }
 
 // Documentation above, next to the constructor

@@ -82,7 +82,7 @@ const MARKER = '689c93f7-0147-40e9-a172-5c6c1c12ba11';
 ///   - `tags`: the list of tags that enclose each item returned by the reader
 export interface ParserOptions {
     tags?: string;
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
 interface Element {
@@ -192,8 +192,8 @@ export function parser(options?: ParserOptions | string) {
             },
         };
     }
-    return (reader: Reader<string | Buffer>, writer: Writer<any>) => {
-        const data = reader.read();
+    return async (reader: Reader<string | Buffer>, writer: Writer<any>) => {
+        const data = await reader.read();
         if (data === undefined) return;
         let str = Buffer.isBuffer(data) ? data.toString(opts.encoding || 'utf8') : data;
         let pos = 0;
@@ -204,18 +204,18 @@ export function parser(options?: ParserOptions | string) {
             pos = 0;
         }
 
-        function fill(pat: string) {
+        async function fill(pat: string) {
             while (true) {
                 const i = str.indexOf(pat, pos);
                 // read at least 3 chars further to detect <!--
                 if (i >= 0 && i < str.length - 3) return i;
-                const rd = reader.read();
+                const rd = await reader.read();
                 if (rd === undefined) return i;
                 str += rd;
             }
         }
 
-        pos = fill('<');
+        pos = await fill('<');
         if (pos < 0) throw new Error('invalid XML: starting < not found');
         if (!/^\s*$/.test(str.substring(0, pos))) throw new Error('invalid XML: does not start with <');
 
@@ -259,7 +259,7 @@ export function parser(options?: ParserOptions | string) {
         do {
             eat(LT);
             forget();
-            npos = fill('<');
+            npos = await fill('<');
 
             let beg = pos;
             ch = str.charCodeAt(pos++);
@@ -298,10 +298,10 @@ export function parser(options?: ParserOptions | string) {
                             if (str.charCodeAt(j + 1) === EXCLAM && str.substring(j + 2, j + 4) === '--') {
                                 val += clean(str.substring(pos, j));
                                 pos = j + 4;
-                                j = fill('-->');
+                                j = await fill('-->');
                                 if (j < 0) throw error('unterminated comment');
                                 pos = j + 3;
-                                fill('<');
+                                await fill('<');
                             } else {
                                 break;
                             }
@@ -337,7 +337,7 @@ export function parser(options?: ParserOptions | string) {
                     pos = j + 3;
                 } else if (ch === OBRA && str.substring(pos, pos + 6) === 'CDATA[') {
                     pos += 6;
-                    const j = fill(']]>');
+                    const j = await fill(']]>');
                     if (j < 0) throw error(']]> missing');
                     bld.cdata(str.substring(pos, j));
                     pos = j + 3;
@@ -435,7 +435,7 @@ export function formatter(options?: FormatterOptions | string) {
         };
     }
 
-    return (reader: Reader<any>, writer: Writer<string>) => {
+    return async (reader: Reader<any>, writer: Writer<string>) => {
         function error(msg: string) {
             return new Error(msg);
         }
@@ -498,10 +498,11 @@ export function formatter(options?: FormatterOptions | string) {
             return el;
         }
 
+
         const rootTag = tags[0];
         const parentTag = tags[tags.length - 1];
 
-        const elt = reader.read();
+        const elt = await reader.read();
         if (elt === undefined) return;
         let parent = getParent(elt);
         const saved = parent[parentTag];
@@ -514,14 +515,14 @@ export function formatter(options?: FormatterOptions | string) {
         if (markerPos < 0) throw new Error('internal error: marker not found');
 
         const prologue = '<?xml version="1.0"?>' + (opts.indent ? '\n' : '');
-        writer.write(prologue + envelope.substring(0, markerPos));
+        await writer.write(prologue + envelope.substring(0, markerPos));
         while (true) {
             const xml = strfy(builder(tags.length - 1), parent[parentTag], parentTag).getResult(true);
-            writer.write(xml);
-            parent = reader.read();
+            await writer.write(xml);
+            parent = await reader.read();
             if (parent === undefined) break;
             parent = getParent(parent);
         }
-        writer.write(envelope.substring(markerPos + marker.length));
+        await writer.write(envelope.substring(markerPos + marker.length));
     };
 }

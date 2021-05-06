@@ -12,16 +12,16 @@ import * as lines from './lines';
 ///   - `sep`: the field separator, comma by default
 export interface ParserOptions {
     sep?: string;
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
 export function parser(options?: ParserOptions) {
     const opts = options || {};
     const sep = opts.sep || ',';
-    return (reader: Reader<string | Buffer>, writer: Writer<any>) => {
+    return async (reader: Reader<string | Buffer>, writer: Writer<any>) => {
         const rd = reader.transform(lines.parser());
-        const keys = (rd.read() || '').split(sep);
-        rd.forEach(line => {
+        const keys = (await rd.read() || '').split(sep);
+        await rd.forEach(async line => {
             // ignore empty line (we get one at the end if file is terminated by newline)
             if (line.length === 0) return;
             const values = line.split(sep);
@@ -29,7 +29,7 @@ export function parser(options?: ParserOptions) {
             keys.forEach((key, i) => {
                 obj[key] = values[i];
             });
-            writer.write(obj);
+            await writer.write(obj);
         });
     };
 }
@@ -46,14 +46,14 @@ export function formatter(options?: FormatterOptions) {
     const opts = options || {};
     const sep = opts.sep || ',';
     const eol = opts.eol || '\n';
-    return (reader: Reader<any>, writer: Writer<string>) => {
-        let obj = reader.read();
+    return async (reader: Reader<any>, writer: Writer<string>) => {
+        let obj = await reader.read();
         if (!obj) return;
         const keys = Object.keys(obj);
-        writer.write(keys.join(sep) + eol);
+        await writer.write(keys.join(sep) + eol);
         do {
             const values = keys.map(key => obj[key]);
-            writer.write(values.join(sep) + eol);
-        } while ((obj = reader.read()) !== undefined);
+            await writer.write(values.join(sep) + eol);
+        } while ((obj = await reader.read()) !== undefined);
     };
 }

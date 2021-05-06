@@ -10,31 +10,31 @@ import { Writer } from '../writer';
 /// * `reader = stdInput(encoding)`
 /// * `writer = stdOutput(encoding)`
 /// * `writer = stdError(encoding)`
-export const input: Input = function(encoding?: string) {
+export const input: Input = function(encoding?: BufferEncoding) {
     const st = new streams.ReadableStream(process.stdin, {});
     st.setEncoding(encoding || null);
     process.stdin.resume();
     return st.reader;
 };
 
-export const output: Output = function(encoding?: string) {
+export const output: Output = function(encoding?: BufferEncoding) {
     return new streams.WritableStream(process.stdout, {
         encoding: encoding,
     }).writer;
 };
 
-export const error: Output = function(encoding?: string) {
+export const error: Output = function(encoding?: BufferEncoding) {
     return new streams.WritableStream(process.stderr, {
         encoding: encoding,
     }).writer;
 };
 
 export interface Input {
-    (encoding: string): Reader<string>;
+    (encoding: BufferEncoding): Reader<string>;
     (): Reader<Buffer>;
 }
 export interface Output {
-    (encoding: string): Writer<string>;
+    (encoding: BufferEncoding): Writer<string>;
     (): Writer<Buffer>;
 }
 

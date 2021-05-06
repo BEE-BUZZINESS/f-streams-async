@@ -1,6 +1,5 @@
 import { assert } from 'chai';
-import { setup } from 'f-mocha';
-import { sleep, wait } from 'f-promise';
+import { sleep, wait } from 'f-promise-async';
 import { IncomingHttpHeaders } from 'http';
 import {
     BinaryReader,
@@ -12,8 +11,6 @@ import {
     Reader,
     Writer,
 } from '../..';
-
-setup();
 
 const { ok, strictEqual } = assert;
 
@@ -125,132 +122,132 @@ function testStreamFormData(body1?: string, body2?: string): ITestStreamData {
     };
 }
 
-function yieldMapper(buffer: Buffer) {
-    wait(setImmediate);
+async function yieldMapper(buffer: Buffer) {
+    await wait(setImmediate);
     return buffer;
 }
 
-function binaryToBufferReaderTransformer(reader: BinaryReader, writer: Writer<Buffer>) {
+async function binaryToBufferReaderTransformer(reader: BinaryReader, writer: Writer<Buffer>) {
     const chunkSize = 40 * 1024;
     // With our setting:
     // - read the whole stream.
     // - chunkSize always bigger than file size.
     // - trigger multipart hk.notify()
-    let r = reader.read(chunkSize);
+    let r = await reader.read(chunkSize);
     while (r) {
-        writer.write(r);
+        await writer.write(r);
         // reread end (undefined)
         // and retrigger multipart hk.notify()
-        r = reader.read(chunkSize);
+        r = await reader.read(chunkSize);
     }
 }
 
 describe(module.id, () => {
-    it('basic multipart/mixed', () => {
+    it('basic multipart/mixed', async () => {
         const data = testStreamMixed();
         const stream = data.reader.transform(multipartParser(headers('mixed')));
-        let part = stream.read();
+        let part = await stream.read();
         ok(part != null, 'part != null');
         strictEqual(part.headers.a, 'Và1', 'header A');
         strictEqual(part.headers.b, 'VB1', 'header B');
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
-        let r = part.read();
+        let r = await part.read();
         strictEqual(r.toString('binary'), 'C1', 'body C1');
         sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
-        r = part.read();
+        r = await part.read();
         strictEqual(r, undefined, 'end of part 1');
         sleep(1);
-        strictEqual(part.read(), undefined, 'end of part 1 again');
+        strictEqual(await part.read(), undefined, 'end of part 1 again');
 
-        part = stream.read();
+        part = await stream.read();
         ok(part != null, 'part != null');
         strictEqual(part.headers.a, 'VA2', 'header A');
         strictEqual(part.headers.b, 'VB2', 'header B');
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
-        r = part.read();
+        r = await part.read();
         strictEqual(r.toString('binary'), 'C2', 'body C2');
         sleep(1);
-        r = part.read();
+        r = await part.read();
         strictEqual(r, undefined, 'end of part 2');
         sleep(1);
-        strictEqual(part.read(), undefined, 'end of part 2 again');
+        strictEqual(await part.read(), undefined, 'end of part 2 again');
 
-        part = stream.read();
+        part = await stream.read();
         assert.isUndefined(part);
     });
 
-    it('multipart/mixed roundtrip', () => {
+    it('multipart/mixed roundtrip', async () => {
         const heads = headers('mixed');
         const data = testStreamMixed();
         const writer = bufferWriter();
-        data.reader
+        await data.reader
             .transform(multipartParser(heads))
             .transform(multipartFormatter(heads))
             .pipe(writer);
         const result = writer.toBuffer();
         strictEqual(result.toString('utf8'), data.expectedResult);
         const writer2 = bufferWriter();
-        bufferReader(result)
+        await bufferReader(result)
             .transform(multipartParser(heads))
             .transform(multipartFormatter(heads))
             .pipe(writer2);
         strictEqual(result.toString('binary'), writer2.toBuffer().toString('binary'));
     });
 
-    it('basic multipart/form-data', () => {
+    it('basic multipart/form-data', async () => {
         const data = testStreamFormData();
         const stream = data.reader.transform(multipartParser(headers('form-data')));
-        let part = stream.read();
+        let part = await stream.read();
         ok(part != null, 'part != null');
         strictEqual(part.headers.a, 'Và1', 'header A');
         strictEqual(part.headers.b, 'VB1', 'header B');
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
         strictEqual(part.headers['content-disposition'], 'form-data; name="c1";', 'content-disposition');
-        let r = part.read();
+        let r = await part.read();
         strictEqual(r.toString('binary'), 'C1', 'body C1');
         sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
-        r = part.read();
+        r = await part.read();
         strictEqual(r, undefined, 'end of part 1');
         sleep(1);
-        strictEqual(part.read(), undefined, 'end of part 1 again');
+        strictEqual(await part.read(), undefined, 'end of part 1 again');
 
-        part = stream.read();
+        part = await stream.read();
         ok(part != null, 'part != null');
         strictEqual(part.headers.a, 'VA2', 'header A');
         strictEqual(part.headers.b, 'VB2', 'header B');
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
         strictEqual(part.headers['content-disposition'], 'form-data; name="c2";', 'content-disposition');
-        r = part.read();
+        r = await part.read();
         strictEqual(r.toString('binary'), 'C2', 'body C2');
         sleep(1);
-        r = part.read();
+        r = await part.read();
         strictEqual(r, undefined, 'end of part 2');
         sleep(1);
-        strictEqual(part.read(), undefined, 'end of part 2 again');
+        strictEqual(await part.read(), undefined, 'end of part 2 again');
 
-        part = stream.read();
+        part = await stream.read();
         assert.isUndefined(part);
     });
 
-    it('multipart/form-data roundtrip', () => {
+    it('multipart/form-data roundtrip', async () => {
         const heads = headers('form-data');
         const data = testStreamFormData();
         const writer = bufferWriter();
-        data.reader
+        await data.reader
             .transform(multipartParser(heads))
             .transform(multipartFormatter(heads))
             .pipe(writer);
         const result = writer.toBuffer();
         strictEqual(result.toString('utf8'), data.expectedResult);
         const writer2 = bufferWriter();
-        bufferReader(result)
+        await bufferReader(result)
             .transform(multipartParser(heads))
             .transform(multipartFormatter(heads))
             .pipe(writer2);
         strictEqual(result.toString('binary'), writer2.toBuffer().toString('binary'));
     });
 
-    it('multipart/form-data with binaryReader and applying transformation', () => {
+    it('multipart/form-data with binaryReader and applying transformation', async () => {
         const expectedLength = [10 * 1024, 20 * 1024];
 
         const heads = headers('form-data');
@@ -260,12 +257,12 @@ describe(module.id, () => {
         );
 
         const receivedLength = [0, 0];
-        data.reader
+        await data.reader
             // Force stream to not be read in same event loop
             .map(yieldMapper)
             .transform(multipartParser(heads))
-            .forEach((partReader: Reader<Buffer>, i) => {
-                binaryReader(partReader)
+            .forEach(async (partReader: Reader<Buffer>, i) => {
+                await binaryReader(partReader)
                     // This transform coupled with binaryReader triggers two final reads in part reader
                     .transform(binaryToBufferReaderTransformer)
                     .forEach(b => {
@@ -279,7 +276,7 @@ describe(module.id, () => {
     // Moving handshake does not fix the problem.
     // I suspect a bug inside mixed parser function that does not support multiple read in part last chunk (return undefined),
     // because of binaryReader with transformer
-    it('multipart/mixed with binaryReader and applying transformation', () => {
+    it('multipart/mixed with binaryReader and applying transformation', async () => {
         const expectedLength = [10 * 1024, 20 * 1024];
 
         const heads = headers('mixed');
@@ -289,11 +286,11 @@ describe(module.id, () => {
         );
 
         const receivedLength = [0, 0];
-        data.reader
+        await data.reader
             .map(yieldMapper)
             .transform(multipartParser(heads))
-            .forEach((partReader: Reader<Buffer>, i) => {
-                binaryReader(partReader)
+            .forEach(async (partReader: Reader<Buffer>, i) => {
+                await binaryReader(partReader)
                     .transform(binaryToBufferReaderTransformer)
                     .forEach(b => {
                         receivedLength[i] += b.length;

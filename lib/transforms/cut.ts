@@ -14,14 +14,15 @@ export interface Options {
 export function transform<T>(options?: Options | number) {
     options = options || {};
     const size = typeof options === 'number' ? options : options.size;
-    return (reader: Reader<T>, writer: Writer<T>) => {
+
+    return async (reader: Reader<T>, writer: Writer<T>) => {
         if (!size) return reader.pipe(writer);
-        let data: any = reader.read();
+        let data: any = await reader.read();
         while (data !== undefined) {
             if (data.length < size) {
-                const d = reader.read();
+                const d = await reader.read();
                 if (d === undefined) {
-                    if (data.length > 0) writer.write(data);
+                    if (data.length > 0) await writer.write(data);
                     data = d;
                 } else {
                     if (typeof data === 'string') data += d;
@@ -30,9 +31,10 @@ export function transform<T>(options?: Options | number) {
                     else throw new Error('Cannot cut: bad data type: ' + typeof data);
                 }
             } else {
-                writer.write(data.slice(0, size));
+                await writer.write(data.slice(0, size));
                 data = data.slice(size);
             }
         }
+        return;
     };
 }

@@ -1,5 +1,5 @@
-import { wait } from 'f-promise';
+import { wait } from 'f-promise-async';
 
-export function nextTick() {
-    wait(cb => process.nextTick(cb));
+export async function nextTick() {
+    await wait(cb => process.nextTick(cb));
 }

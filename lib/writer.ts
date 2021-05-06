@@ -27,31 +27,31 @@
 ///
 /// `import * as f from 'f-streams'`
 ///
-import { run, wait } from 'f-promise';
+import { run, wait } from 'f-promise-async';
 import * as nodeStream from 'stream';
 import * as sys from 'util';
 import { create as createUturn } from './devices/uturn';
 import { ParallelOptions, Reader } from './reader';
 
 export class Writer<T> {
-    write: (this: Writer<T>, value?: T) => this;
+    write: (this: Writer<T>, value?: T) => Promise<this>;
     ended: boolean;
-    constructor(write: (value: T) => void, stop?: (arg?: any) => void) {
+    constructor(write: (value: T) => Promise<Writer<T> | void>, stop?: (arg?: any) => Promise<Writer<T> | void>) {
         if (typeof write !== 'function') throw new Error('invalid writer.write: ' + (write && typeof write));
         this.ended = false;
-        this.write = data => {
+        this.write = async data => {
             if (data === undefined) {
-                if (!this.ended) write.call(this);
+                if (!this.ended) await write.call(this);
                 this.ended = true;
             } else {
                 if (this.ended) throw new Error('invalid attempt to write after end');
-                write.call(this, data);
+                await write.call(this, data);
             }
             return this;
         };
         if (stop) {
-            this.stop = (arg?: any) => {
-                stop.call(this, arg);
+            this.stop = async (arg?: any) => {
+                await stop.call(this, arg);
                 return this;
             };
         }
@@ -60,9 +60,9 @@ export class Writer<T> {
     ///
     /// * `writer = writer.writeAll(val)`
     ///   writes `val` and ends the writer
-    writeAll(val: T) {
-        this.write(val);
-        this.write(undefined);
+    async writeAll(val: T): Promise<Writer<T>> {
+        await this.write(val);
+        await this.write(undefined);
         return this;
     }
 
@@ -70,8 +70,8 @@ export class Writer<T> {
     /// * `writer = writer.stop(err)`
     ///   stops the writer.
     ///   by default arg is silently ignored
-    stop(arg?: any): Writer<T> {
-        this.write(undefined);
+    async stop(arg?: any): Promise<Writer<T> | void> {
+        await this.write(undefined);
         return this;
     }
 
@@ -80,7 +80,7 @@ export class Writer<T> {
     ///   ends the writer - compatiblity call (errors won't be thrown to caller)
     end() {
         if (arguments.length > 0) throw new Error('invalid end call: ' + arguments.length + ' arg(s)');
-        run(() => this.write(undefined)).catch(err => console.error(`end call failed: ${err && err.message}`));
+        this.write(undefined).catch(err => console.error(`end call failed: ${err && err.message}`));
         return this;
     }
 
@@ -94,15 +94,14 @@ export class Writer<T> {
     /// * `stream = writer.nodify()`
     ///   converts the writer into a native node Writable stream.
     nodify() {
-        const self = this;
         const stream = new nodeStream.Writable();
         // ES2015 does not let us override method directly but we do it!
         // This is fishy. Clean up later (should do it from end event).
         // also very fragile because of optional args.
         const anyStream: any = stream;
-        anyStream._write = function(chunk: any, encoding?: string, done?: Function) {
+        anyStream._write = (chunk: any, encoding?: string, done?: Function) => {
             if (chunk && encoding && encoding !== 'buffer') chunk = chunk.toString(encoding);
-            run(() => self.write(chunk)).then(
+            this.write(chunk).then(
                 () => {
                     if (done) done();
                 },
@@ -111,10 +110,10 @@ export class Writer<T> {
         };
         // override end to emit undefined marker
         const end = stream.end;
-        anyStream.end = function(chunk: any, encoding?: string, cb?: (err: any, val?: any) => any) {
+        anyStream.end = (chunk: any, encoding?: string, cb?: (err: any, val?: any) => any) => {
             end.call(stream, chunk, encoding, (err: any) => {
                 if (err) return stream.emit('error', err) as never;
-                run(() => self.write(undefined)).then(v => cb && cb(null, v), e => cb && cb(e));
+                this.write(undefined).then(v => cb && cb(null, v), e => cb && cb(e));
                 return undefined;
             });
         };
@@ -126,7 +125,7 @@ export class Writer<T> {
     }
 }
 
-export function create<T>(write: (value: T) => Writer<T>, stop?: (arg?: any) => Writer<T>) {
+export function create<T>(write: (value: T) => Promise<Writer<T> | void>, stop?: (arg?: any) => Promise<Writer<T> | void>) {
     return new Writer(write, stop);
 }
 
@@ -162,18 +161,18 @@ export class PreImpl<T> {
 }
 
 export interface Pre<T> extends PreImpl<T> {
-    map<U>(fn: (elt: U, index?: number) => T): Writer<U>;
-    tee(writer: Writer<T>): Writer<T>;
-    concat(readers: Reader<T>[]): Writer<T>;
-    transform<U>(fn: (reader: Reader<U>, writer: Writer<T>) => void): Writer<U>;
-    filter(fn: (elt: T, index?: number) => boolean): Writer<T>;
-    until(fn: (elt: T, index?: number) => boolean): Writer<T>;
-    while(fn: (elt: T, index?: number) => boolean): Writer<T>;
-    limit(n: number, stopArg?: any): Writer<T>;
-    skip(n: number): Writer<T>;
-    parallel(options: ParallelOptions | number, consumer: (source: any) => Reader<T>): Writer<T>;
-    buffer(max: number): Writer<T>;
-    nodeTransform<U>(duplex: nodeStream.Duplex): Writer<U>;
+    map<U>(fn: (elt: U, index?: number) => T): Promise<Writer<U>>;
+    tee(writer: Writer<T>): Promise<Writer<T>>;
+    concat(readers: Reader<T>[]): Promise<Writer<T>>;
+    transform<U>(fn: (reader: Reader<U>, writer: Writer<T>) => void): Promise<Writer<U>>;
+    filter(fn: (elt: T, index?: number) => boolean): Promise<Writer<T>>;
+    until(fn: (elt: T, index?: number) => boolean): Promise<Writer<T>>;
+    while(fn: (elt: T, index?: number) => boolean): Promise<Writer<T>>;
+    limit(n: number, stopArg?: any): Promise<Writer<T>>;
+    skip(n: number): Promise<Writer<T>>;
+    parallel(options: ParallelOptions | number, consumer: (source: any) => Reader<T>): Promise<Writer<T>>;
+    buffer(max: number): Promise<Writer<T>>;
+    nodeTransform<U>(duplex: nodeStream.Duplex): Promise<Writer<U>>;
 }
 
 // add reader methods to Pre.prototype
@@ -195,11 +194,11 @@ process.nextTick(() => {
         'buffer',
         'nodeTransform',
     ].forEach(name => {
-        preProto[name] = function(this: Pre<any>, arg: any) {
+        preProto[name] = async function(this: Pre<any>, arg: any) {
             const uturn = require('./devices/uturn').create();
-            run(() => uturn.reader[name](arg).pipe(this.writer)).then(
-                result => uturn.end(null, result),
-                err => uturn.end(err),
+            (await uturn.reader[name](arg)).pipe(this.writer).then(
+                (result: any) => uturn.end(null, result),
+                (err: Error) => uturn.end(err),
             );
             return uturn.writer;
         };

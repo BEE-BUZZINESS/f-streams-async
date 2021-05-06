@@ -27,18 +27,18 @@
 ///
 /// `import * as f from 'f-streams'`
 ///
-import { Callback, funnel, run, wait } from 'f-promise';
+import { Callback, funnel, map, run, wait } from 'f-promise-async';
 import * as nodeStream from 'stream';
 import { convert as predicate } from './predicate';
 import * as stopException from './stop-exception';
 import { nextTick } from './util';
 import { Writer } from './writer';
 
-function tryCatch<R>(that: any, fn: () => R): R {
+async function tryCatch<R>(that: any, fn: () => Promise<R>): Promise<R> {
     try {
-        return fn.call(that);
+        return await fn.call(that);
     } catch (ex) {
-        that.stop(ex);
+        await that.stop(ex);
         throw ex;
     }
 }
@@ -64,11 +64,11 @@ function resolvePredicate<T>(fn: ((value: T) => boolean) | {}): (value: T) => bo
 
 export class Reader<T> {
     parent?: Stoppable;
-    read: (this: Reader<T>) => T | undefined;
-    _stop: (this: Reader<T>, arg?: any) => void;
+    read: (this: Reader<T>) => Promise<T | undefined>;
+    _stop: (this: Reader<T>, arg?: any) => Promise<void>;
     stopped: boolean;
     headers: { [name: string]: string }; // experimental
-    constructor(read: () => T | undefined, stop?: (arg: any) => void, parent?: Stoppable) {
+    constructor(read: () => Promise<T | undefined>, stop?: (arg: any) => Promise<void>, parent?: Stoppable) {
         if (typeof read !== 'function') throw new Error('invalid reader.read: ' + (read && typeof read));
         this.parent = parent;
         this.read = read;
@@ -80,11 +80,11 @@ export class Reader<T> {
     ///   Similar to `forEach` on arrays.
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   This call is asynchonous. It returns the number of entries processed when the end of stream is reached.
-    forEach(fn: (value: T, index: number) => void) {
-        return tryCatch(this, () => {
+    async forEach(fn: (value: T, index: number) => Promise<void> | void) {
+        return tryCatch(this, async () => {
             let i: number, val: any;
-            for (i = 0; (val = this.read()) !== undefined; i++) {
-                fn.call(null, val, i);
+            for (i = 0; (val = await this.read()) !== undefined; i++) {
+                await fn.call(null, val, i);
             }
         });
     }
@@ -93,11 +93,11 @@ export class Reader<T> {
     ///   Similar to `map` on arrays.
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   Returns another reader on which other operations may be chained.
-    map<U>(fn: (value: T, index: number) => U): Reader<U> {
+    map<U>(fn: (value: T, index: number) => Promise<U> | U): Reader<U> {
         return new Reader(
-            () => {
+            async () => {
                 let count = 0;
-                const val = this.read();
+                const val = await this.read();
                 if (val === undefined) return undefined;
                 return fn.call(null, val, count++);
             },
@@ -111,14 +111,14 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns true at the end of stream if `fn` returned true on every entry.
     ///   Stops streaming and returns false as soon as `fn` returns false on an entry.
-    every(fn: ((value: T) => boolean) | {}): boolean {
+    async every(fn: ((value: T) => Promise<boolean> | boolean) | {}): Promise<boolean> {
         const f = resolvePredicate(fn);
-        return tryCatch(this, () => {
+        return tryCatch(this, async () => {
             while (true) {
-                const val = this.read();
+                const val = await this.read();
                 if (val === undefined) return true;
-                if (!f.call(null, val)) {
-                    this.stop();
+                if (!await f.call(null, val)) {
+                    await this.stop();
                     return false;
                 }
             }
@@ -130,14 +130,14 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns undefined at the end of stream if `fn` returned false on every entry.
     ///   Otherwise returns the first element on which `fn` returns true.
-    find(fn: ((value: T) => boolean) | {}): T | undefined {
+    async find(fn: ((value: T) => boolean) | {}): Promise<T | undefined> {
         const f = resolvePredicate(fn);
-        return tryCatch(this, () => {
+        return tryCatch(this, async () => {
             while (true) {
-                const val = this.read();
+                const val =  await this.read();
                 if (val === undefined) return undefined;
-                if (f.call(null, val)) {
-                    this.stop();
+                if ( await f.call(null, val)) {
+                     await this.stop();
                     return val;
                 }
             }
@@ -149,14 +149,14 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns false at the end of stream if `fn` returned false on every entry.
     ///   Stops streaming and returns true as soon as `fn` returns true on an entry.
-    some(fn: ((value: T) => boolean) | {}): boolean {
+    async some(fn: ((value: T) => Promise<boolean> | boolean) | {}): Promise<boolean> {
         const f = resolvePredicate(fn);
-        return tryCatch(this, () => {
+        return tryCatch(this, async () => {
             while (true) {
-                const val = this.read();
+                const val = await this.read();
                 if (val === undefined) return false;
-                if (f.call(null, val)) {
-                    this.stop();
+                if (await f.call(null, val)) {
+                    await this.stop();
                     return true;
                 }
             }
@@ -168,12 +168,12 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(current, elt)` where `current` is `initial` on the first entry and
     ///   the result of the previous `fn` call otherwise.
     ///   Returns the value returned by the last `fn` call.
-    reduce<U>(fn: (prev: U, value: T) => U, v: U): U {
-        return tryCatch(this, () => {
+    async reduce<U>(fn: (prev: U, value: T) => Promise<U> | U, v: U): Promise<U> {
+        return tryCatch(this, async () => {
             while (true) {
-                const val = this.read();
+                const val = await this.read();
                 if (val === undefined) return v;
-                v = fn.call(null, v, val);
+                v = await fn.call(null, v, val);
             }
         });
     }
@@ -184,20 +184,20 @@ export class Reader<T> {
     // should be pipe<R extends Writer<T>>(writer: R)
     // but transform-flow-comments plugin does not understand this syntax
     // so I relax the return type.
-    pipe(writer: Writer<T>): any {
-        tryCatch(this, () => {
+    async pipe(writer: Writer<T>): Promise<any> {
+        await tryCatch(this, async () => {
             let val: T | undefined;
             do {
-                val = this.read();
+                val = await this.read();
                 try {
-                    writer.write(val);
+                    await writer.write(val);
                 } catch (ex) {
                     const arg = stopException.unwrap(ex);
                     if (arg && arg !== true) {
-                        this.stop(arg);
+                        await this.stop(arg);
                         throw arg;
                     } else {
-                        this.stop(arg);
+                        await this.stop(arg);
                         break;
                     }
                 }
@@ -209,33 +209,41 @@ export class Reader<T> {
     /// * `reader = reader.tee(writer)`
     ///   Branches another writer on the chain`.
     ///   Returns another reader on which other operations may be chained.
-    tee(writer: Writer<T>) {
+    tee(writer: Writer<T>): Reader<T> {
         const parent = this;
         let writeStop: [any];
         let readStop: [any];
         const stopResult: (arg: any) => T | undefined = arg => {
             if (!arg || arg === true) return undefined;
-            else throw arg;
+            else {
+                throw arg;
+            }
         };
-        const readDirect = () => {
-            let val = parent.read();
+        const readDirect = async () => {
+            let val = await parent.read();
             if (!writeStop) {
                 try {
-                    writer.write(val);
+                    await writer.write(val);
                 } catch (ex) {
                     const arg = stopException.unwrap(ex);
                     writeStop = [arg];
                     if (readStop) {
+
                         // both outputs are now stopped
                         // stop parent if readStop was a soft stop
-                        if (!readStop[0]) parent.stop(arg);
-                        if (arg && arg !== true) throw arg;
+                        if (!readStop[0]) await parent.stop(arg);
+                        if (arg && arg !== true) {
+                            throw arg;
+                        }
                         else val = undefined;
                     } else if (arg) {
+
                         // direct output was not stopped and received a full stop
                         readStop = writeStop;
-                        parent.stop(arg);
-                        if (arg && arg !== true) throw arg;
+                        await parent.stop(arg);
+                        if (arg && arg !== true) {
+                            throw arg;
+                        }
                         else val = undefined;
                     }
                 }
@@ -244,28 +252,28 @@ export class Reader<T> {
         };
 
         return new Reader(
-            function read() {
+            async function read() {
                 if (readStop) return stopResult(readStop[0]);
                 return readDirect();
             },
-            function stop(arg) {
+            async function stop(arg) {
                 if (readStop) return;
                 readStop = [arg];
                 if (arg && !writeStop) {
                     // full stop - writer output still running
                     // stop writer and parent
                     writeStop = readStop;
-                    writer.stop(arg);
-                    parent.stop(arg);
+                    await writer.stop(arg);
+                    await parent.stop(arg);
                 } else if (writeStop && !writeStop[0]) {
                     // only writer was stopped before
                     // stop parent
-                    parent.stop(arg);
+                    await parent.stop(arg);
                 } else if (!writeStop) {
                     // direct output is stopped.
                     // we continue to read it, to propagate to the secondary output
-                    run(() => {
-                        while (readDirect() !== undefined);
+                    run(async () => {
+                        while (await readDirect() !== undefined);
                     }).catch(err => {
                         throw err;
                     });
@@ -289,14 +297,14 @@ export class Reader<T> {
         const streams: Reader<T>[] = Array.prototype.concat.apply([], arguments);
         let stream: Reader<T> | undefined = this;
         return new Reader(
-            function read() {
+            async function read() {
                 let val: T | undefined;
-                while (stream && (val = stream.read()) === undefined) stream = streams.shift();
+                while (stream && (val = await stream.read()) === undefined) stream = streams.shift();
                 return val;
             },
-            function stop(arg) {
+            async function stop(arg) {
                 while (stream) {
-                    stream.stop(arg);
+                    await stream.stop(arg);
                     stream = streams.shift();
                 }
             },
@@ -307,7 +315,7 @@ export class Reader<T> {
     /// * `result = reader.toArray()`
     ///   Reads all entries and returns them to an array.
     ///   Note that this call is an anti-pattern for streaming but it may be useful when working with small streams.
-    toArray(): T[] {
+    async toArray(): Promise<T[]> {
         return this.reduce(
             (arr, elt) => {
                 arr.push(elt);
@@ -320,8 +328,8 @@ export class Reader<T> {
     /// * `result = reader.readAll()`
     ///   Reads all entries and returns them as a single string or buffer. Returns undefined if nothing has been read.
     ///   Note that this call is an anti-pattern for streaming but it may be useful when working with small streams.
-    readAll(): string | Buffer | T[] | undefined {
-        const arr = this.toArray();
+    async readAll(): Promise<string | Buffer | T[] | undefined> {
+        const arr = await this.toArray();
         if (typeof arr[0] === 'string') return arr.join('');
         if (Buffer.isBuffer(arr[0])) {
             const bufs: any = arr;
@@ -337,14 +345,14 @@ export class Reader<T> {
     ///   where `reader` is the `stream` to which `transform` is applied,
     ///   and writer is a writer which is piped into the next element of the chain.
     ///   Returns another reader on which other operations may be chained.
-    transform<U>(fn: (reader: Reader<T>, writer: Writer<U>) => void): Reader<U> {
+    transform<U>(fn: (reader: Reader<T>, writer: Writer<U>) => Promise<void>): Reader<U> {
         const parent = this;
         const uturn = require('./devices/uturn').create();
         function afterTransform(err?: any) {
             // stop parent at end
-            run(() => parent.stop()).then(() => uturn.end(err), e => uturn.end(err || e));
+            run(async () => await parent.stop()).then(() => uturn.end(err), e => uturn.end(err || e));
         }
-        run(() => fn.call(null, parent, uturn.writer)).then(afterTransform, afterTransform);
+        run(async () => await fn.call(null, parent, uturn.writer)).then(afterTransform, afterTransform);
         return uturn.reader;
     }
 
@@ -358,11 +366,11 @@ export class Reader<T> {
         let i = 0,
             done = false;
         return new Reader(
-            function() {
+            async function() {
                 while (!done) {
-                    const val = parent.read();
+                    const val = await parent.read();
                     done = val === undefined;
-                    if (done || f.call(null, val, i++)) return val;
+                    if (done || await f.call(null, val, i++)) return val;
                 }
                 return undefined;
             },
@@ -376,16 +384,16 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   `stopArg` is an optional argument which is passed to `stop` when `fn` becomes true.
     ///   Returns another reader on which other operations may be chained.
-    until(fn: ((value: T, index: number) => boolean) | {}, stopArg?: any) {
+    until(fn: ((value: T, index: number) => Promise<boolean> | boolean) | {}, stopArg?: any) {
         const f = resolvePredicate(fn);
         const parent = this;
         let i = 0;
         return new Reader(
-            function() {
-                const val = parent.read();
+            async function() {
+                const val = await parent.read();
                 if (val === undefined) return undefined;
-                if (!f.call(null, val, i++)) return val;
-                parent.stop(stopArg);
+                if (!await f.call(null, val, i++)) return val;
+                await parent.stop(stopArg);
                 return undefined;
             },
             undefined,
@@ -400,9 +408,9 @@ export class Reader<T> {
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   `stopArg` is an optional argument which is passed to `stop` when `fn` becomes false.
     ///   Returns another reader on which other operations may be chained.
-    while(fn: ((value: T, index: number) => boolean) | {}, stopArg?: any) {
+    while(fn: ((value: T, index: number) => Promise<boolean> | boolean) | {}, stopArg?: any) {
         const f = resolvePredicate(fn);
-        return this.until((val, i) => !f.call(null, val, i), stopArg);
+        return this.until(async (val, i) => !await f.call(null, val, i), stopArg);
     }
 
     /// * `result = reader.limit(count, stopArg)`
@@ -465,22 +473,22 @@ export class Reader<T> {
                 streams.push(
                     consumer(
                         new Reader(
-                            function read() {
+                            async function read() {
                                 if (stopArg) {
                                     if (stopArg === true) return undefined;
                                     else throw stopArg;
                                 }
-                                return fun(() => {
+                                return fun(async () => {
                                     if (inside++ !== 0) throw new Error('funnel error: ' + inside);
-                                    const val = parent.read();
+                                    const val = await parent.read();
                                     inside--;
                                     return val;
                                 });
                             },
-                            function stop(arg) {
+                            async function stop(arg) {
                                 if (stopArg) return;
                                 stopArg = arg;
-                                parent.stop(arg);
+                                await parent.stop(arg);
                             },
                             parent,
                         ),
@@ -533,13 +541,13 @@ export class Reader<T> {
                     if (!err && v !== undefined) setTimeout(fill, 2);
                 }
             };
-            run(() => parent.read()).then(v => afterRead(null, v), afterRead);
+            parent.read().then(v => afterRead(null, v), afterRead);
         };
         fill();
 
         return new Reader(
-            () =>
-                wait((cb: Callback<T>) => {
+            async () =>
+                await wait((cb: Callback<T>) => {
                     if (buffered.length > 0) {
                         const val = buffered.shift();
                         fill();
@@ -571,18 +579,18 @@ export class Reader<T> {
             if (pending) return;
             let sync = true;
             pending = true;
-            run(() => this.read()).then(
-                result => {
+            run(async () => await this.read()).then(
+                async result => {
                     pending = false;
                     if (result === undefined) {
                         if (sync) {
-                            nextTick();
+                            await nextTick();
                             end();
                         } else end();
                     } else {
                         if (stream.push(result)) {
                             if (sync) {
-                                nextTick();
+                                await nextTick();
                                 more();
                             } else more();
                         }
@@ -609,14 +617,14 @@ export class Reader<T> {
 
     /// * `cmp = reader1.compare(reader2)`
     ///   compares reader1 and reader2 return 0 if equal,
-    compare(other: Reader<T>, options?: CompareOptions<T>) {
+    async compare(other: Reader<T>, options?: CompareOptions<T>): Promise<number> {
         const opts = options || {};
         let compare = opts.compare;
         if (!compare) compare = (a, b) => (a === b ? 0 : a < b ? -1 : +1);
         let cmp = 0;
         while (true) {
-            const data1 = this.read();
-            const data2 = other.read();
+            const data1 = await this.read();
+            const data2 = await other.read();
             if (data1 === undefined) return data2 === undefined ? 0 : -1;
             if (data2 === undefined) return +1;
             // for now, only strings
@@ -635,33 +643,33 @@ export class Reader<T> {
     ///   The default `stop` function is a no-op.
     ///   Note: `stop` is only called if reading stops before reaching the end of the stream.
     ///   Sources should free their resources both on `stop` and on end-of-stream.
-    stop(arg?: any) {
+    async stop(arg?: any) {
         if (this.stopped) return;
         this.stopped = true;
-        if (this._stop) this._stop(arg);
-        else if (this.parent) this.parent.stop(arg);
+        if (this._stop) await this._stop(arg);
+        else if (this.parent) await this.parent.stop(arg);
     }
 
-    // Iterable interface
-    [Symbol.iterator](): Iterator<T> {
-        return {
-            next: () => {
-                const val = this.read();
-                return {
-                    value: val!,
-                    done: val === undefined,
-                };
-            },
-        };
-    }
+    // // Iterable interface
+    // async [Symbol.iterator](): Iterator<Promise<T>> {
+    //     return {
+    //         next: async () => {
+    //             const val = await this.read();
+    //             return {
+    //                 value: val!,
+    //                 done: val === undefined,
+    //             };
+    //         },
+    //     };
+    // }
 }
 
 export class PeekableReader<T> extends Reader<T> {
     buffered: (T | undefined)[];
     constructor(parent: Reader<T>) {
         super(
-            () => {
-                return this.buffered.length > 0 ? this.buffered.pop() : parent.read();
+            async () => {
+                return this.buffered.length > 0 ? this.buffered.pop() : await parent.read();
             },
             undefined,
             parent,
@@ -673,8 +681,8 @@ export class PeekableReader<T> extends Reader<T> {
         this.buffered.push(val);
         return this; // for chaining
     }
-    peek() {
-        const val = this.read();
+    async peek() {
+        const val = await this.read();
         this.unread(val);
         return val;
     }
@@ -692,7 +700,7 @@ exports.decorate = function(proto: any) {
     return proto;
 };
 
-export function create<T>(read: () => T, stop?: (arg: any) => void) {
+export function create<T>(read: () => Promise<T>, stop?: (arg: any) => Promise<void>) {
     return new Reader(read, stop, undefined);
 }
 
@@ -703,9 +711,9 @@ export class StreamGroup<T> implements Stoppable {
     constructor(readers: Reader<T>[]) {
         this.readers = readers;
     }
-    stop(arg?: any) {
-        this.readers.forEach(rd => {
-            if (rd) rd.stop(arg);
+    async stop(arg?: any) {
+        await map(this.readers, async rd => {
+            if (rd) await rd.stop(arg);
         });
     }
 
@@ -744,13 +752,13 @@ export class StreamGroup<T> implements Stoppable {
                         }
                     }
                 };
-                run(() => stream.read()).then(v => afterRead(null, v), afterRead);
+                stream.read().then(v => afterRead(null, v), afterRead);
             };
             next();
         });
         return new Reader(
-            () =>
-                wait((cb: Callback<T>) => {
+            async () =>
+                await wait((cb: Callback<T>) => {
                     if (alive <= 0) return cb(null), void 0;
                     const res = results.shift();
                     if (res) {
@@ -776,14 +784,14 @@ export class StreamGroup<T> implements Stoppable {
         const entry = (stream: Reader<T>, i: number) => ({
             i: i,
             stream: stream,
-            read: () => run(() => stream.read()),
+            read: () => stream.read(),
         });
         const q = this.readers.map(entry);
         return new Reader(
-            function() {
+            async function() {
                 let elt: Entry | undefined;
                 while ((elt = q.shift())) {
-                    const val = wait(elt.read());
+                    const val = await elt.read();
                     if (val !== undefined) {
                         q.push(entry(elt.stream, elt.i));
                         return val;
@@ -804,10 +812,10 @@ export class StreamGroup<T> implements Stoppable {
     ///   that it has consumed. The next `read()` on the joined stream will fetch these values.
     ///   Note that the length of the `values` array will decrease every time an input stream is exhausted.
     ///   Returns a stream on which other operations may be chained.
-    join(fn: (values: (T | undefined)[]) => T | undefined) {
+    join(fn: (values: (T | undefined)[]) => Promise<T | undefined>) {
         let last = 0; // index of last value read by default fn
         if (!fn) {
-            fn = vals => {
+            fn = async vals => {
                 let i = last;
                 do {
                     i = (i + 1) % vals.length;
@@ -839,7 +847,7 @@ export class StreamGroup<T> implements Stoppable {
             }
             const vals = values.filter(val => val !== undefined);
             if (vals.length === active) {
-                run(() => fn.call(null, values)).then(
+                run(async () => await fn.call(null, values)).then(
                     val => {
                         // be careful with re-entrancy
                         const rep = reply;
@@ -859,14 +867,14 @@ export class StreamGroup<T> implements Stoppable {
             this.readers.forEach((rd, j) => {
                 if (rd && values[j] === undefined) {
                     count++;
-                    run(() => rd.read()).then(v => callbacks[j](null, v), e => callbacks[j](e));
+                    rd.read().then(v => callbacks[j](null, v), e => callbacks[j](e));
                 }
             });
             if (count === 0) throw new Error('bad joiner: must pick and reset at least one value');
         };
         return new Reader<T>(
-            () =>
-                wait(cb => {
+            async () =>
+                await wait(cb => {
                     if (done) {
                         cb(undefined);
                         return;

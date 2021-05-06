@@ -27,10 +27,10 @@ export {
     HttpServerOptions,
 };
 
-function endWrite(cli: HttpClientRequest) {
-    const resp = cli.end().response();
+async function endWrite(cli: HttpClientRequest) {
+    const resp = await cli.end().response();
     if (resp.statusCode !== 201) throw new Error('Request return status code: ' + resp.statusCode); // TODO: better manage errors
-    const data = resp.readAll();
+    const data = await resp.readAll();
     return typeof data === 'string' && /^application\/json/.test(resp.headers['content-type']!)
         ? JSON.parse(data)
         : data;
@@ -86,15 +86,15 @@ export function listener(
 ) {
     return httpListener(listenr, fixOptions(options));
 }
-/// * `factory = factory("http://user:pass@host:port/...")`
-///    Use reader for a GET request, writer for POST request
+// * `factory = factory("http://user:pass@host:port/...")`
+//    Use reader for a GET request, writer for POST request
 export type FactoryWriter = Writer<any> & { _result: any };
 
 export function factory(url: string) {
     return {
         /// * `reader = factory.reader()`
-        reader() {
-            const response = module.exports
+        async reader() {
+            const response = await module.exports
                 .client({
                     url: url,
                     method: 'GET',
@@ -102,17 +102,17 @@ export function factory(url: string) {
                 .end()
                 .response();
             if (response.statusCode !== 200) {
-                const payload = response.readAll();
+                const payload = await response.readAll();
                 throw new Error("Error reading '" + url + "'; Status " + response.statusCode + ': ' + payload);
             }
             return response;
         },
         /// * `writer = factory.writer()`
-        writer() {
+        async writer() {
             let cli: HttpClientRequest;
             let type: string | null;
             return {
-                write(this: FactoryWriter, data: any) {
+                async write(this: FactoryWriter, data: any) {
                     const opt: HttpClientOptions = {
                         url: url,
                         method: 'POST',
@@ -121,15 +121,17 @@ export function factory(url: string) {
                     if (!cli) {
                         type = guessType(data);
                         if (type) opt.headers!['content-type'] = type;
-                        cli = client(opt).proxyConnect();
+                        cli = await (client(opt).proxyConnect());
                     }
-                    if (data === undefined) return (this._result = endWrite(cli));
-                    else return cli.write(type === 'application/json' ? JSON.stringify(data) : data);
+                    if (data === undefined) {
+                        return (this._result = await endWrite(cli));
+                    }
+                    else return await cli.write(type === 'application/json' ? JSON.stringify(data) : data);
                 },
                 get result(): any {
                     return (this as FactoryWriter)._result;
                 },
-            };
+            } as FactoryWriter;
         },
     };
 }

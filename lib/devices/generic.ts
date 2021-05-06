@@ -10,10 +10,10 @@ import { Writer } from '../writer';
 ///   Empty streams. `createEmptyReader().read()` returns `undefined`.
 ///   `createEmptyWriter()` create a null sink. It just discards anything you would write to it.
 export const empty = {
-    reader: new Reader(function(this: Reader<any>) {}),
-    writer: new Writer(function(this: Writer<any>, value: any) {}),
-    createReader: () => new Reader(function(this: Reader<any>) {}),
-    createWriter: () => new Writer(function(this: Writer<any>, value: any) {}),
+    reader: new Reader(async function(this: Reader<any>) {}),
+    writer: new Writer(async function(this: Writer<any>, value: any) {}),
+    createReader: () => new Reader(async function(this: Reader<any>) {}),
+    createWriter: () => new Writer(async function(this: Writer<any>, value: any) {}),
 };
 
 /// !doc
@@ -23,12 +23,12 @@ export const empty = {
 ///
 /// * `reader = genericReader(read[, stop])`
 ///   creates a reader from a given `read()` function and an optional `stop([arg])` function.
-export function reader<T>(read: () => T | undefined, stop?: (arg?: any) => void) {
+export function reader<T>(read: () => Promise<T | undefined>, stop?: (arg?: any) => Promise<void>) {
     return new Reader<T>(read, stop);
 }
 
 /// * `writer = genericWriter(write)`
 ///   creates a writer from a given `write(val)` function.
-export function writer<T>(write: (value: T | undefined) => void, stop?: (arg?: any) => void) {
+export function writer<T>(write: (value: T | undefined) => Promise<Writer<T> | void>, stop?: (arg?: any) => Promise<Writer<T> | void>) {
     return new Writer<T>(write, stop);
 }

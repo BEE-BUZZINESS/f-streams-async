@@ -10,8 +10,8 @@ export interface Options {
 export class BufferWriter extends Writer<Buffer> {
     chunks: Buffer[];
     constructor(options: Options) {
-        super((data: Buffer) => {
-            if (!options.sync) nextTick();
+        super(async (data: Buffer) => {
+            if (!options.sync) await nextTick();
             if (data !== undefined) this.chunks.push(data);
             return this;
         });
@@ -45,8 +45,8 @@ export function reader(buffer: Buffer, options?: Options | number) {
     } else opts = options || {};
     const chunkSize = opts.chunkSize || 1024;
     let pos = 0;
-    return new Reader(function read() {
-        if (!opts.sync) nextTick();
+    return new Reader(async function read() {
+        if (!opts.sync) await nextTick();
         if (pos >= buffer.length) return;
         const len = typeof chunkSize === 'function' ? chunkSize() : chunkSize;
         const s = buffer.slice(pos, pos + len);

@@ -20,7 +20,7 @@
 ///
 /// For a simple example of this API in action,
 /// see the [google client example](../../../examples/streams/googleClient._js)
-import { run, wait, withContext } from 'f-promise';
+import { run, wait, withContext } from 'f-promise-async';
 import * as http from 'http';
 import * as https from 'https';
 import * as net from 'net';
@@ -75,25 +75,23 @@ export class Wrapper<EmitterT extends Emitter> {
         });
     }
 
-    close() {
-        wait(
-            new Promise((resolve, reject) => {
-                if (this._closed) return resolve();
-                const close = this._emitter.end || this._emitter.close || this._emitter.destroySoon;
-                if (typeof close !== 'function') return resolve();
-                this._onClose = err => {
-                    this._closed = true;
-                    this._onClose = nop;
-                    if (err) reject(err);
-                    else resolve();
-                    resolve = reject = nop;
-                };
-                if (this._doesNotEmitClose) {
-                    this._emitter.emit('close');
-                }
-                close.call(this._emitter);
-            }),
-        );
+    async close() {
+        await wait(cb => {
+            if (this._closed) return cb(null);
+            const close = this._emitter.end || this._emitter.close || this._emitter.destroySoon;
+            if (typeof close !== 'function') return cb(null);
+            this._onClose = err => {
+                this._closed = true;
+                this._onClose = nop;
+                if (err) cb(err);
+                else cb(null);
+                cb = nop;
+            };
+            if (this._doesNotEmitClose) {
+                this._emitter.emit('close');
+            }
+            close.call(this._emitter);
+        });
     }
     /// * `closed = wrapper.closed`
     ///    returns true if the `close` event has been received.
@@ -187,7 +185,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         } else this._done = true;
     }
 
-    _readChunk() {
+    async _readChunk() {
         if (this._chunks.length > 0) {
             const chunk = this._chunks.splice(0, 1)[0];
             this._current -= chunk.length;
@@ -243,7 +241,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
     /// * `stream.setEncoding(enc)`
     ///   sets the encoding.
     ///   returns `this` for chaining.
-    setEncoding(enc: string | null) {
+    setEncoding(enc: BufferEncoding | null) {
         this._encoding = enc;
         if (enc) this._emitter.setEncoding(enc);
         return this;
@@ -256,7 +254,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
     ///   Reads till the end if `len` is negative.
     ///   Without `len`, the read calls returns the data chunks as they have been emitted by the underlying stream.
     ///   Once the end of stream has been reached, the `read` call returns `null`.
-    read(len?: number) {
+    async read(len?: number) {
         if (this._closed && !this._chunks.length) return undefined;
         if (len == null) return this.reader.read();
         if (len < 0) len = Infinity;
@@ -264,7 +262,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         const chunks: Data[] = [];
         let total = 0;
         while (total < len) {
-            const chunk = this.reader.read();
+            const chunk = await this.reader.read();
             if (!chunk) return chunks.length === 0 ? undefined : this._concat(chunks, total);
             if (total + chunk.length <= len) {
                 chunks.push(chunk);
@@ -280,8 +278,8 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
     /// * `data = stream.readAll()`
     ///   reads till the end of stream.
     ///   Equivalent to `stream.read(-1)`.
-    readAll() {
-        const result = this.read(-1);
+    async readAll() {
+        const result = await this.read(-1);
         return result === undefined ? null : result;
     }
     /// * `stream.unread(chunk)`
@@ -303,7 +301,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         }, 0);
     }
 
-    stop(arg?: any) {
+    async stop(arg?: any) {
         if (arg && arg !== true) this._error = this._error || arg;
         if (!this.closed) {
             this.unwrap();
@@ -327,13 +325,13 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
 ///   creates a writable stream wrapper.
 
 export interface WritableOptions {
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
 export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrapper<EmitterT> {
     _error: Error;
     _onDrain: (err?: Error) => void;
-    _encoding?: string;
+    _encoding?: BufferEncoding;
     /// * `writer = stream.writer`
     ///   returns a clean f writer.
     writer: Writer<any>;
@@ -355,7 +353,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
             if (this._onDrain) this._onDrain(err);
             else this._error = err;
         });
-        this.writer = generic.writer((data?: Data) => {
+        this.writer = generic.writer(async (data?: Data) => {
             if (this._error) throw new Error(this._error.message);
             // node streams don't differentiate between null and undefined. So end in both cases
             if (data != null) {
@@ -363,42 +361,40 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
                 if (!data.length) return this.writer;
                 if (typeof data === 'string') data = Buffer.from(data, this._encoding || 'utf8');
                 //
-                if (!this._emitter.write(data)) this._drain();
+                if (!await this._emitter.write(data)) await this._drain();
             } else {
-                wait(cb => this._emitter.end.call(this._emitter, cb));
+                await wait(cb => this._emitter.end.call(this._emitter, cb));
             }
             return this.writer;
         });
     }
 
-    _drain() {
-        wait(
-            new Promise((resolve, reject) => {
-                this._onDrain = err => {
-                    this._onDrain = nop;
-                    if (err) reject(err);
-                    else resolve();
-                    reject = resolve = nop;
-                };
-            }),
-        );
+    async _drain() {
+        await wait(cb => {
+            this._onDrain = err => {
+                this._onDrain = nop;
+                if (err) cb(err);
+                else cb(null);
+                cb = nop;
+            };
+        });
     }
 
     /// * `stream.write(data[, enc])`
     ///   Writes the data.
     ///   This operation is asynchronous because it _drains_ the stream if necessary.
     ///   Returns `this` for chaining.
-    write(data?: Data, enc?: string) {
+    async write(data?: Data, enc?: BufferEncoding) {
         if (typeof data === 'string') data = Buffer.from(data, enc || this._encoding || 'utf8');
         else if (data === null) data = undefined;
-        this.writer.write(data);
+        await this.writer.write(data);
         return this;
     }
 
     /// * `stream.end()`
     ///   signals the end of the send operation.
     ///   Returns `this` for chaining.
-    end(data?: Data, enc?: string) {
+    end(data?: Data, enc?: BufferEncoding) {
         if (this.writer.ended) {
             if (data != null) throw new Error('invalid attempt to write after end');
             return this;
@@ -406,14 +402,14 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         if (typeof data === 'string') data = Buffer.from(data, enc || this._encoding || 'utf8');
         else if (data === null) data = undefined;
         if (data !== undefined) {
-            run(() => this.writer.write(data)).then(
+            this.writer.write(data).then(
                 () => this.end(),
                 err => {
                     throw err;
                 },
             );
         } else {
-            run(() => this.writer.write()).catch(err => {
+            this.writer.write().catch(err => {
                 throw err;
             });
         }
@@ -425,7 +421,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
     }
 }
 
-function _getSupportedEncoding(enc: string) {
+function _getSupportedEncoding(enc: string): BufferEncoding | null {
     // List of charsets: http://www.iana.org/assignments/character-sets/character-sets.xml
     // Node Buffer supported encodings: http://nodejs.org/api/buffer.html#buffer_buffer
     switch (enc.trim().toLowerCase()) {
@@ -444,7 +440,7 @@ function _getSupportedEncoding(enc: string) {
     return null; // we do not understand this charset - do *not* encode
 }
 
-function _getEncodingDefault(headers: http.IncomingHttpHeaders) {
+function _getEncodingDefault(headers: http.IncomingHttpHeaders): BufferEncoding | null {
     const comps = (headers['content-type'] || 'text/plain').split(';');
     const ctype = comps[0];
     for (let i = 1; i < comps.length; i++) {
@@ -475,9 +471,9 @@ function _getEncodingStrict(headers: http.IncomingHttpHeaders) {
 }
 
 export interface EncodingOptions {
-    detectEncoding?: 'strict' | 'disable' | ((headers: http.IncomingHttpHeaders) => string);
+    detectEncoding?: 'strict' | 'disable' | ((headers: http.IncomingHttpHeaders) => BufferEncoding);
 }
-function _getEncoding(headers: http.IncomingHttpHeaders, options?: EncodingOptions) {
+function _getEncoding(headers: http.IncomingHttpHeaders, options?: EncodingOptions): BufferEncoding | null {
     if (headers['content-encoding']) return null;
     if (!options) return _getEncodingDefault(headers);
     if (typeof options.detectEncoding === 'function') return options.detectEncoding(headers);
@@ -661,26 +657,24 @@ export class Server<EmitterT extends ServerEmitter> extends Wrapper<EmitterT> {
     constructor(emitter: EmitterT) {
         super(emitter);
     }
-    listen(...args: any[]) {
-        return wait(
-            new Promise((resolve, reject) => {
-                if (this._closed) return reject(new Error('cannot listen: server is closed'));
-                const reply = (err: Error | undefined, result?: Server<EmitterT>) => {
-                    if (err) reject(err);
-                    else resolve(result);
-                    reject = resolve = nop;
-                };
-                args.push(() => {
-                    reply(undefined, this);
-                });
+    async listen(...args: any[]) {
+        return wait(cb => {
+            if (this._closed) return cb(new Error('cannot listen: server is closed'));
+            const reply = (err: Error | undefined, result?: Server<EmitterT>) => {
+                if (err) cb(err);
+                else cb(null, result);
+                cb = nop;
+            };
+            args.push(() => {
+                reply(undefined, this);
+            });
 
-                this._autoClosed.push(() => {
-                    reply(new Error('server was closed unexpectedly'));
-                });
-                this._emitter.on('error', reply);
-                this._emitter.listen.apply(this._emitter, args);
-            }),
-        );
+            this._autoClosed.push(() => {
+                reply(new Error('server was closed unexpectedly'));
+            });
+            this._emitter.on('error', reply);
+            this._emitter.listen.apply(this._emitter, args);
+        });
     }
 }
 
@@ -703,9 +697,9 @@ export type HttpListener = (request: HttpServerRequest, response: HttpServerResp
 export function httpListener(listener: HttpListener, options: HttpServerOptions) {
     options = options || {};
     return (request: http.IncomingMessage, response: http.ServerResponse) => {
-        return run(() =>
-            withContext(
-                () => listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options)),
+        return run(async () =>
+            await withContext(
+                async () => listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options)),
                 {},
             ),
         ).catch(err => {
@@ -796,12 +790,12 @@ export class HttpClientResponse extends ReadableStream<http.IncomingMessage> {
 }
 
 export interface HttpClientOptions extends HttpClientResponseOptions {
-    url?: string;
-    protocol?: string;
-    host?: string;
-    port?: string;
-    path?: string;
-    method?: string;
+    url?: string | null;
+    protocol?: string | null;
+    host?: string | null;
+    port?: string | null;
+    path?: string | null;
+    method?: string | null;
     headers?: http.IncomingHttpHeaders;
     module?: any;
     user?: string;
@@ -961,8 +955,8 @@ export class HttpClientRequest extends WritableStream<http.ClientRequest> {
 
     /// * `response = request.response()`
     ///    returns the response.
-    response() {
-        const response = this._response || wait(this._responseCb.bind(this));
+    async response() {
+        const response = this._response || await wait(this._responseCb.bind(this));
         return new HttpClientResponse(response, this._options); // options.reader?
     }
     setTimeout(ms: number) {
@@ -1053,18 +1047,18 @@ export class SocketStream extends ReadableStream<net.Socket & NodeJS.ReadableStr
         this._writableStream = new WritableStream(emitter, (options && options.write) || options);
     }
     // no multiple inheritance - so we delegate WritableStream methods
-    write(data?: Data, enc?: string) {
+    write(data?: Data, enc?: BufferEncoding) {
         this._writableStream.write(data, enc);
         return this;
     }
-    end(data?: Data, enc?: string) {
+    end(data?: Data, enc?: BufferEncoding) {
         this._writableStream.end(data, enc);
         return this;
     }
     get writer() {
         return this._writableStream.writer;
     }
-    setTimeout(ms: number, callback?: Function) {
+    setTimeout(ms: number, callback?: () => void) {
         this._emitter.setTimeout(ms, callback);
         return this;
     }
@@ -1205,8 +1199,8 @@ export class SocketServer extends Server<net.Server> {
             serverOptions = {};
         }
         const emitter = net.createServer(serverOptions, connection =>
-            run(() =>
-                withContext(() => connectionListener(new SocketStream(connection, streamOptions || {})), {}),
+            run(async () =>
+                await withContext(async () => connectionListener(new SocketStream(connection, streamOptions || {})), {}),
             ).catch(err => {
                 if (err) throw err;
             }),

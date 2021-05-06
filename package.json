@@ -1,43 +1,40 @@
 {
-    "name": "f-streams",
+    "name": "f-streams-async",
     "description": "node.js streams with promises and coroutines",
-    "version": "3.1.2-bee.1",
+    "version": "1.0.0",
     "license": "MIT",
     "author": {
-        "name": "Bruno Jouhier",
-        "email": "bruno.jouhier@sage.com"
+        "name": "Sébastien Berthier",
+        "email": "s.berthier@bee-buzziness.com"
     },
     "main": "build/index.js",
     "typings": "build/index.d.ts",
     "repository": {
         "type": "git",
-        "url": "git://github.com/Sage/f-streams.git"
+        "url": "git://github.com/s.berthier/f-streams-async.git"
     },
     "engines": {
-        "node": ">=8.0.0"
+        "node": ">=14.0.0"
     },
     "dependencies": {
-        "f-promise": "^2.0.3"
+        "f-promise-async": "git+https://github.com/sberthier/f-promise-async.git#910aa3791a4c40ba3f67791ea2a4009e022cc6b5"
     },
     "devDependencies": {
         "@types/chai": "^3.4.34",
         "@types/mocha": "^2.2.43",
-        "@types/node": "^8.10.32",
+        "@types/node": "^14.14.22",
         "chai": "^3.5.0",
-        "f-mocha": "^2.0.0",
         "list-open-files": "^1.1.0",
         "mocha": "^6.1.4",
+        "source-map-support": "^0.5.19",
         "tslint": "^5.18.0",
-        "typescript": "^3.5.2"
+        "typescript": "^4.1.3"
     },
     "scripts": {
         "prepare": "rm -rf build; tsc",
-        "test": "mocha build/test/unit --exit --timeout 5000",
+        "watch": "tsc -w",
+        "test": "mocha --require source-map-support/register build/test/unit --exit --timeout 5000 --full-trace --async-stack-traces",
         "lint": "tslint -e 'node_modules/**' -p ."
     },
-    "readmeFilename": "README.md",
-    "bugs": {
-        "url": "https://github.com/Sage/f-streams/issues"
-    },
-    "homepage": "https://github.com/Sage/f-streams#readme"
+    "readmeFilename": "README.md"
 }

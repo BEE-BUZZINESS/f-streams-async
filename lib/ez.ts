@@ -20,13 +20,13 @@ export function reader(arg: string | any[] | Buffer): EzReader.Reader<any> {
         const f = factory(arg);
         let rd: EzReader.Reader<any>;
         return devices.generic.reader(
-            function read() {
-                if (!rd) rd = f.reader();
-                return rd.read();
+            async function read() {
+                if (!rd) rd = await f.reader();
+                return await rd.read();
             },
-            function stop(aarg) {
-                if (!rd) rd = f.reader();
-                return rd.stop(aarg);
+            async function stop(aarg) {
+                if (!rd) rd = await f.reader();
+                return await rd.stop(aarg);
             },
         );
     } else if (Array.isArray(arg)) {
@@ -43,13 +43,13 @@ export function writer(arg: string | any[] | Buffer): EzWriter.Writer<any> {
         const f = factory(arg);
         let wr: EzWriter.Writer<any>;
         const wrapper = devices.generic.writer(
-            function write(val) {
-                if (!wr) wr = f.writer();
+            async function write(val) {
+                if (!wr) wr = await f.writer();
                 return wr.write(val);
             },
-            function stop(aarg) {
-                if (!wr) wr = f.writer();
-                return wr.stop(aarg);
+            async function stop(aarg) {
+                if (!wr) wr = await f.writer();
+                return await wr.stop(aarg);
             },
         );
         Object.defineProperty(wrapper, 'result', {

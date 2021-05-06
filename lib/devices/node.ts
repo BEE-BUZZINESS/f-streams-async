@@ -19,10 +19,10 @@ require('../writer').decorate(streams.WritableStream.prototype);
 ///   https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md
 
 export interface NodeReaderOptions extends streams.ReadableOptions {
-    encoding?: string;
+    encoding?: BufferEncoding;
 }
 
-export function fixOptions(options: NodeReaderOptions | string | undefined) {
+export function fixOptions(options: NodeReaderOptions | BufferEncoding | undefined) {
     let opts: NodeReaderOptions;
     if (typeof options === 'string') {
         opts = {
@@ -34,7 +34,7 @@ export function fixOptions(options: NodeReaderOptions | string | undefined) {
     return opts;
 }
 
-export function reader<T>(emitter: NodeJS.ReadableStream, options?: NodeReaderOptions | string) {
+export function reader<T>(emitter: NodeJS.ReadableStream, options?: NodeReaderOptions | BufferEncoding) {
     const opts = fixOptions(options);
     const rd = new streams.ReadableStream(emitter, opts);
     if (opts.encoding) rd.setEncoding(opts.encoding);
