@@ -45,7 +45,7 @@ export function reader<T>(emitter: NodeJS.ReadableStream, options?: NodeReaderOp
 ///   For a full description of the options, see `WritableStream` in
 ///   https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md
 
-export interface NodeWriterOptions {}
+export interface NodeWriterOptions extends streams.WritableOptions {}
 
 export function writer<T>(emitter: NodeJS.WritableStream, options?: NodeWriterOptions) {
     const wr = new streams.WritableStream(emitter, fixOptions(options));

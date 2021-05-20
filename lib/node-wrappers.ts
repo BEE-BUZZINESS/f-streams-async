@@ -48,6 +48,10 @@ export interface Emitter extends NodeJS.EventEmitter {
 
 function nop() {}
 
+export interface WrapperOptions {
+    doesNotEmitClose?: boolean;
+}
+
 export class Wrapper<EmitterT extends Emitter> {
     /// * `emitter = wrapper.emitter`
     ///    returns the underlying emitter. The emitter stream can be used to attach additional observers.
@@ -57,7 +61,7 @@ export class Wrapper<EmitterT extends Emitter> {
     _autoClosed: (() => void)[];
     _doesNotEmitClose: boolean;
 
-    constructor(emitter: EmitterT) {
+    constructor(emitter: EmitterT, options?: WrapperOptions) {
         this._emitter = emitter;
         this._closed = false;
         emitter.on('close', () => {
@@ -66,6 +70,7 @@ export class Wrapper<EmitterT extends Emitter> {
         // hook for subclasses
         this._autoClosed = [];
         this._onClose = this._trackClose;
+        this._doesNotEmitClose = options?.doesNotEmitClose || false;
     }
 
     _trackClose() {
@@ -121,7 +126,7 @@ export class Wrapper<EmitterT extends Emitter> {
 /// * `stream = new streams.ReadableStream(stream[, options])`
 ///   creates a readable stream wrapper.
 
-export interface ReadableOptions {
+export interface ReadableOptions extends WrapperOptions {
     lowMark?: number;
     highMark?: number;
     destroyOnStop?: boolean;
@@ -144,7 +149,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
     ///   returns a clean f reader.
     reader: Reader<any>;
     constructor(emitter: EmitterT, options?: ReadableOptions) {
-        super(emitter);
+        super(emitter, options);
         options = options || {};
         this._low = Math.max(options.lowMark || 0, 0);
         this._high = Math.max(options.highMark || 0, this._low);
@@ -324,7 +329,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
 /// * `stream = new streams.WritableStream(stream[, options])`
 ///   creates a writable stream wrapper.
 
-export interface WritableOptions {
+export interface WritableOptions extends WrapperOptions {
     encoding?: BufferEncoding;
 }
 
@@ -336,7 +341,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
     ///   returns a clean f writer.
     writer: Writer<any>;
     constructor(emitter: EmitterT, options?: WritableOptions) {
-        super(emitter);
+        super(emitter, options);
         options = options || {};
         this._encoding = options.encoding;
 
@@ -507,11 +512,10 @@ export interface HttpServerOptions extends ReadableOptions, WritableOptions, Enc
 
 export class HttpServerRequest extends ReadableStream<http.IncomingMessage> {
     constructor(req: http.IncomingMessage, options?: HttpServerOptions) {
-        super(req, options);
+        super(req, { doesNotEmitClose: true, ...options });
         this.setEncoding(_getEncoding(req.headers, options));
         // special sage hack - clean up later
         if ((req as any).session) (this as any).session = (req as any).session;
-        this._doesNotEmitClose = true;
     }
 
     // method, url, headers and trailers are read-write - for compatibility
@@ -583,8 +587,7 @@ Object.defineProperty(HttpServerRequest.prototype, '_request', {
 
 export class HttpServerResponse extends WritableStream<http.ServerResponse> {
     constructor(resp: http.ServerResponse, options?: HttpServerOptions) {
-        super(resp, options);
-        this._doesNotEmitClose = true;
+        super(resp, { doesNotEmitClose: true, ...options });
     }
     /// * `response.writeContinue()`
     writeContinue() {
