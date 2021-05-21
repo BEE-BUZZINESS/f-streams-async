@@ -359,6 +359,10 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
             else this._error = err;
         });
         this.writer = generic.writer(async (data?: Data) => {
+            // emitter has been closed before writer end, consider this as normal
+            if (data == null && this._closed) {
+                return this.writer;
+            }
             if (this._error) throw new Error(this._error.message);
             // node streams don't differentiate between null and undefined. So end in both cases
             if (data != null) {
