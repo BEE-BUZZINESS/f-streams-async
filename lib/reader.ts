@@ -76,17 +76,21 @@ export class Reader<T> {
         if (stop) this._stop = stop;
     }
 
-    /// * `count = reader.forEach(fn)`
+    /// * `count = reader.each(fn)`
     ///   Similar to `forEach` on arrays.
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   This call is asynchonous. It returns the number of entries processed when the end of stream is reached.
-    async forEach(fn: (value: T, index: number) => Promise<void> | void) {
+    async each(fn: (value: T, index: number) => Promise<void> | void): Promise<void> {
         return tryCatch(this, async () => {
             let i: number, val: any;
             for (i = 0; (val = await this.read()) !== undefined; i++) {
                 await fn.call(null, val, i);
             }
         });
+    }
+    // use each instead to avoid warning about promise ignorer in forEach (standard javascript)
+    async forEach(fn: (value: T, index: number) => Promise<void> | void): Promise<void> {
+        await this.each(fn);
     }
 
     /// * `reader = reader.map(fn)`

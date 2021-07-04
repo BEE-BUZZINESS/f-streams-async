@@ -98,7 +98,7 @@ describe(module.id, () => {
         it('stop() should close fd', async () => {
             const reader = binaryFileReader(tmpFilePath);
             try {
-                await reader.forEach(async (chunk: Buffer, index: number) => {
+                await reader.each(async (chunk: Buffer, index: number) => {
                     if (index === 1) {
                         await reader.stop(new Error('read stream error'));
                         return;
@@ -163,7 +163,7 @@ describe(module.id, () => {
         it('stop() should close fd', async () => {
             const reader = textFileReader(tmpFilePath);
             try {
-                await reader.forEach(async (chunk: string, index: number) => {
+                await reader.each(async (chunk: string, index: number) => {
                     if (index === 1) {
                         await reader.stop(new Error('read stream error'));
                         return;

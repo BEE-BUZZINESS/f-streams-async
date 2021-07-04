@@ -195,7 +195,7 @@ export function formatter(options?: FormatterOptions) {
     const opts = options || {};
     return async (reader: Reader<any>, writer: Writer<string>) => {
         if (!opts.unbounded) writer.write('[');
-        await reader.forEach(async (obj, i) => {
+        await reader.each(async (obj, i) => {
             if (i > 0) await writer.write(',\n');
             await writer.write(JSON.stringify(obj, opts.replacer, opts.space));
         });

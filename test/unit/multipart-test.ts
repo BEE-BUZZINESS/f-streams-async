@@ -261,11 +261,11 @@ describe(module.id, () => {
             // Force stream to not be read in same event loop
             .map(yieldMapper)
             .transform(multipartParser(heads))
-            .forEach(async (partReader: Reader<Buffer>, i) => {
+            .each(async (partReader: Reader<Buffer>, i) => {
                 await binaryReader(partReader)
                     // This transform coupled with binaryReader triggers two final reads in part reader
                     .transform(binaryToBufferReaderTransformer)
-                    .forEach(b => {
+                    .each(b => {
                         receivedLength[i] += b.length;
                     });
 
@@ -289,10 +289,10 @@ describe(module.id, () => {
         await data.reader
             .map(yieldMapper)
             .transform(multipartParser(heads))
-            .forEach(async (partReader: Reader<Buffer>, i) => {
+            .each(async (partReader: Reader<Buffer>, i) => {
                 await binaryReader(partReader)
                     .transform(binaryToBufferReaderTransformer)
-                    .forEach(b => {
+                    .each(b => {
                         receivedLength[i] += b.length;
                     });
 

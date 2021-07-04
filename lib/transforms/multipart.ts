@@ -107,7 +107,7 @@ function mixedFormatter(ct: MultipartContentType) {
             }
             await writer.write(Buffer.from('\n' + boundary + '\n'));
             // cannot use pipe because pipe writes undefined at end.
-            await part.forEach(async data => {
+            await part.each(async data => {
                 await writer.write(data);
             });
             await writer.write(Buffer.from('\n' + boundary + '\n'));
@@ -227,7 +227,7 @@ function formDataFormatter(ct: MultipartContentType): (reader: Reader<Reader<Buf
             }
             // cannot use pipe because pipe writes undefined at end.;
             await writer.write(Buffer.from(CR_LF));
-            await part.forEach(async data => {
+            await part.each(async data => {
                 await writer.write(data);
             });
             await writer.write(Buffer.from(CR_LF));

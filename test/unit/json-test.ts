@@ -34,7 +34,7 @@ describe(module.id, () => {
     it('mixed data with node node stream', async () => {
         const stream = (await nodeStream(mixedData));
         const expected = JSON.parse(mixedData);
-        await stream.transform(jsonParser()).forEach(function(elt, i) {
+        await stream.transform(jsonParser()).each(function(elt, i) {
             deepEqual(elt, expected[i], expected[i]);
         });
     });
@@ -42,7 +42,7 @@ describe(module.id, () => {
     it('fragmented read', async () => {
         const stream = stringReader(mixedData, 2).transform(jsonParser());
         const expected = JSON.parse(mixedData);
-        await stream.forEach(function(elt, i) {
+        await stream.each(function(elt, i) {
             deepEqual(elt, expected[i], expected[i]);
         });
     });
@@ -50,7 +50,7 @@ describe(module.id, () => {
     it('binary input', async () => {
         const stream = bufferReader(Buffer.from(mixedData, 'utf8')).transform(jsonParser());
         const expected = JSON.parse(mixedData);
-        await stream.forEach(function(elt, i) {
+        await stream.each(function(elt, i) {
             deepEqual(elt, expected[i], expected[i]);
         });
     });

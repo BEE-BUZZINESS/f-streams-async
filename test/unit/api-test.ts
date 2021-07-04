@@ -49,6 +49,27 @@ function minJoiner(values: any[]) {
 
 describe(module.id, () => {
 
+    it('each', async () => {
+        const results: number[] = [];
+        const source = numbers(5);
+        await source.each(function (num) {
+            results.push(num);
+        });
+        strictEqual(results.join(','), '0,1,2,3,4');
+        source.finalCheck();
+    });
+
+    it('each error', async () => {
+        const source = numbers(5);
+        try {
+            await source.each(fail());
+            ok(false);
+        } catch (ex) {
+            strictEqual(ex.message, 'FAILED');
+        }
+        source.finalCheck();
+    });
+
     it('forEach', async () => {
         const results: number[] = [];
         const source = numbers(5);

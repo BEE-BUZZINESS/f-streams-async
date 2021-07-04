@@ -22,7 +22,7 @@ export function parser(options?: ParserOptions): (reader: Reader<string | Buffer
     }
     return async (reader: Reader<string | Buffer>, writer: Writer<string>) => {
         let remain = '';
-        await reader.forEach(async chunk => {
+        await reader.each(async chunk => {
             let str: string;
             if (typeof chunk === 'string') str = chunk;
             else if (Buffer.isBuffer(chunk)) str = chunk.toString(opts.encoding || 'utf8');
@@ -56,11 +56,11 @@ export function formatter(options?: FormatterOptions) {
     const eol = opts.eol || '\n';
     return async (reader: Reader<string>, writer: Writer<string>) => {
         if (opts.extra) {
-            await reader.forEach(async line => {
+            await reader.each(async line => {
                 await writer.write(line + eol);
             });
         } else {
-            await reader.forEach(async (line, i) => {
+            await reader.each(async (line, i) => {
                 await writer.write(i > 0 ? eol + line : line);
             });
         }

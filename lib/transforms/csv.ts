@@ -21,7 +21,7 @@ export function parser(options?: ParserOptions) {
     return async (reader: Reader<string | Buffer>, writer: Writer<any>) => {
         const rd = reader.transform(lines.parser());
         const keys = (await rd.read() || '').split(sep);
-        await rd.forEach(async line => {
+        await rd.each(async line => {
             // ignore empty line (we get one at the end if file is terminated by newline)
             if (line.length === 0) return;
             const values = line.split(sep);
