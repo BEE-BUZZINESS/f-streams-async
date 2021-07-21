@@ -15,8 +15,11 @@ export function transform<T>(options?: Options | number) {
     options = options || {};
     const size = typeof options === 'number' ? options : options.size;
 
-    return async (reader: Reader<T>, writer: Writer<T>) => {
-        if (!size) return reader.pipe(writer);
+    return async (reader: Reader<T>, writer: Writer<T>): Promise<void> => {
+        if (!size) {
+            await reader.pipe(writer);
+            return;
+        }
         let data: any = await reader.read();
         while (data !== undefined) {
             if (data.length < size) {

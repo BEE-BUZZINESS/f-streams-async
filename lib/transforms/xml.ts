@@ -149,7 +149,7 @@ export function parser(options?: ParserOptions | string) {
                 }
                 elt = child;
             },
-            pop: (writer: Writer<any>, tag?: string) => {
+            pop: async (writer: Writer<any>, tag?: string) => {
                 if (tag && tag !== elt.$tag) throw error('closing tag mismatch: expected ' + elt.$tag + ', got ' + tag);
                 const parent = elt.$parent;
                 const emit = elt.$emit;
@@ -165,7 +165,7 @@ export function parser(options?: ParserOptions | string) {
                     delete elt.$index;
                     delete elt.$emit;
                 }
-                if (emit) writer.write(clone(parent, tag, elt));
+                if (emit) await writer.write(clone(parent, tag, elt));
                 elt = parent;
             },
             attribute: (atb: string, val: any) => {
@@ -275,7 +275,7 @@ export function parser(options?: ParserOptions | string) {
                     ch = str.charCodeAt(pos++);
                     if (ch === SLASH) {
                         eat(GT);
-                        bld.pop(writer);
+                        await bld.pop(writer);
                         break;
                     } else if (begWord[ch]) {
                         while (inWord[str.charCodeAt(pos)]) pos++;
@@ -327,7 +327,7 @@ export function parser(options?: ParserOptions | string) {
                 }
                 eatSpaces();
                 eat(GT);
-                bld.pop(writer, tag);
+                await bld.pop(writer, tag);
             } else if (ch === EXCLAM) {
                 // comment
                 ch = str.charCodeAt(pos++);
@@ -497,7 +497,6 @@ export function formatter(options?: FormatterOptions | string) {
             }
             return el;
         }
-
 
         const rootTag = tags[0];
         const parentTag = tags[tags.length - 1];

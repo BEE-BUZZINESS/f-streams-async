@@ -33,7 +33,7 @@ export class StreamedQueue<T> extends Queue<T> {
         super(options);
         this.reader = generic.reader<T>(async () => await this.read(), async () => this.end());
         this.writer = generic.writer<T>(async val => {
-            await this.write(val)
+            await this.write(val);
         });
     }
 }

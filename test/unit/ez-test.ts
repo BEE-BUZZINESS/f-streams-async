@@ -116,7 +116,7 @@ describe(module.id, () => {
             await fReader('string:hello world').pipe(createEmptyWriter());
             await fReader([2, 3, 4]).pipe(createEmptyWriter());
         } catch {
-            ok(false)
+            ok(false);
         }
     });
 });

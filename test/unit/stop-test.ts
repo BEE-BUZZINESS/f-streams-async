@@ -185,7 +185,7 @@ describe(module.id, () => {
         const source = numbers(10);
         const target = arrayWriter<number>();
         await source.pipe(await target.pre.limit(5));
-        strictEqual((await target.toArray()).join(), '0,1,2,3,4');
+        strictEqual(target.toArray().join(), '0,1,2,3,4');
         ok(source.stoppedReason, 'source stopped');
     });
 });

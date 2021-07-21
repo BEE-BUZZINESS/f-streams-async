@@ -8,7 +8,6 @@ import { wait } from 'f-promise-async';
 import { stringify } from '../mappers/convert';
 import { Reader } from '../reader';
 import { parser as linesParser } from '../transforms/lines';
-import { Writer } from '../writer';
 import * as generic from './generic';
 import * as node from './node';
 

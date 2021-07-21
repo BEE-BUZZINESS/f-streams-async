@@ -3,7 +3,6 @@ import { Reader } from '../reader';
 import * as stopException from '../stop-exception';
 import { nextTick } from '../util';
 import { Writer } from '../writer';
-import * as generic from './generic';
 
 let lastId = 0;
 const tracer: ((...args: any[]) => void) | undefined = undefined; // = console.error;

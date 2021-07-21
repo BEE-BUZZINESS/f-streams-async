@@ -1,7 +1,5 @@
 import { wait } from 'f-promise-async';
 import * as fs from 'fs';
-import { Reader } from '../reader';
-import { Writer } from '../writer';
 import * as generic from './generic';
 import * as node from './node';
 

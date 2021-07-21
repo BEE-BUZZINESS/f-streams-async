@@ -370,7 +370,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
                 if (!data.length) return this.writer;
                 if (typeof data === 'string') data = Buffer.from(data, this._encoding || 'utf8');
                 //
-                if (!await this._emitter.write(data)) await this._drain();
+                if (!this._emitter.write(data)) await this._drain();
             } else {
                 await wait(cb => this._emitter.end.call(this._emitter, cb));
             }
@@ -1054,8 +1054,8 @@ export class SocketStream extends ReadableStream<net.Socket & NodeJS.ReadableStr
         this._writableStream = new WritableStream(emitter, (options && options.write) || options);
     }
     // no multiple inheritance - so we delegate WritableStream methods
-    write(data?: Data, enc?: BufferEncoding) {
-        this._writableStream.write(data, enc);
+    async write(data?: Data, enc?: BufferEncoding) {
+        await this._writableStream.write(data, enc);
         return this;
     }
     end(data?: Data, enc?: BufferEncoding) {
@@ -1268,9 +1268,9 @@ exports.usingWritable = function(
 /// * `streams.pump(inStream, outStream)`
 ///    Pumps from `inStream` to `outStream`.
 ///    Does not close the streams at the end.
-exports.pump = function(inStream: ReadableStream<any>, outStream: WritableStream<any>) {
+exports.pump = async function(inStream: ReadableStream<any>, outStream: WritableStream<any>) {
     let data: any;
-    while ((data = inStream.read())) outStream.write(data);
+    while ((data = await inStream.read())) await outStream.write(data);
 };
 ///
 /// ## Encoding detection

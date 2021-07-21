@@ -53,7 +53,7 @@ export interface CompareOptions<T> {
 }
 
 export interface Stoppable {
-    stop: (arg?: any) => void;
+    stop: (arg?: any) => Promise<void>;
 }
 
 function resolvePredicate<T>(fn: ((value: T) => boolean) | {}): (value: T) => boolean {
@@ -188,7 +188,7 @@ export class Reader<T> {
     // should be pipe<R extends Writer<T>>(writer: R)
     // but transform-flow-comments plugin does not understand this syntax
     // so I relax the return type.
-    async pipe(writer: Writer<T>): Promise<any> {
+    async pipe<W extends Writer<T>>(writer: W): Promise<W> {
         await tryCatch(this, async () => {
             let val: T | undefined;
             do {

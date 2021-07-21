@@ -1,11 +1,9 @@
 import { assert } from 'chai';
-import { run, wait, sleep as fsleep } from 'f-promise-async';
+import { run, sleep as fsleep } from 'f-promise-async';
 import { arrayWriter, genericReader } from '../..';
-import * as ez from '../..';
-
-const { strictEqual, deepEqual, equal, ok } = assert;
-
 import { Reader } from '../../lib/reader';
+
+const { strictEqual, deepEqual, ok } = assert;
 
 interface TestReader extends Reader<number> {
     stopInfo: { at: number, arg: any };
@@ -40,7 +38,9 @@ function fail(result?: any) {
 }
 
 function minJoiner(values: any[]) {
-    const min = Math.min.apply(null, values.filter(function (val) { return val !== undefined; }));
+    const min = Math.min.apply(null, values.filter(function (val) {
+        return val !== undefined;
+    }));
     values.forEach(function (val, i) {
         if (val === min) values[i] = undefined;
     });
@@ -93,9 +93,9 @@ describe(module.id, () => {
 
     it('map', async () => {
         const source = numbers(5);
-        strictEqual((await (await (source.map(function (num) {
+        strictEqual((await (source.map(function (num) {
             return num * num;
-        }).pipe(arraySink()))).toArray()).join(','), '0,1,4,9,16');
+        }).pipe(arraySink()))).toArray().join(','), '0,1,4,9,16');
         source.finalCheck();
     });
 
@@ -231,7 +231,7 @@ describe(module.id, () => {
     it('pipe', async () => {
         const source = numbers(5);
         const pipeReader = await source.pipe(arraySink());
-        strictEqual((await pipeReader.toArray()).join(','), '0,1,2,3,4');
+        strictEqual(pipeReader.toArray().join(','), '0,1,2,3,4');
         source.finalCheck();
     });
 
@@ -240,8 +240,8 @@ describe(module.id, () => {
     it('tee', async () => {
         const source = numbers(5);
         const secondary = arraySink();
-        strictEqual(await (await source.tee(secondary).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
-        strictEqual(await secondary.toArray().join(','), '0,1,2,3,4');
+        strictEqual((await source.tee(secondary).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
+        strictEqual(secondary.toArray().join(','), '0,1,2,3,4');
         source.finalCheck();
     });
 
@@ -388,11 +388,11 @@ describe(module.id, () => {
 
     it('filter', async () => {
         let source: TestReader;
-        strictEqual(await (await (source = numbers(10)).filter(function (val) {
+        strictEqual((await (source = numbers(10)).filter(function (val) {
             return val % 2;
         }).pipe(arraySink())).toArray().join(','), '1,3,5,7,9');
         source.finalCheck();
-        strictEqual(await (await (source = numbers(10)).filter({
+        strictEqual((await (source = numbers(10)).filter({
             $gt: 2,
             $lt: 6,
         }).pipe(arraySink())).toArray().join(','), '3,4,5');
@@ -401,11 +401,11 @@ describe(module.id, () => {
 
     it('while', async () => {
         let source: TestReader;
-        strictEqual(await (await (source = numbers()).while(function (val) {
+        strictEqual((await (source = numbers()).while(function (val) {
             return val < 5;
         }).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
         source.finalCheck();
-        strictEqual(await (await (source = numbers()).while({
+        strictEqual((await (source = numbers()).while({
             $lt: 5,
         }).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
         source.finalCheck();
@@ -413,11 +413,11 @@ describe(module.id, () => {
 
     it('until', async () => {
         let source: TestReader;
-        strictEqual(await (await (source = numbers()).until(function (val) {
+        strictEqual((await (source = numbers()).until(function (val) {
             return val > 5;
         }).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5');
         source.finalCheck();
-        strictEqual(await (await (source = numbers()).until({
+        strictEqual((await (source = numbers()).until({
             $gt: 5,
         }).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5');
         source.finalCheck();
@@ -425,13 +425,13 @@ describe(module.id, () => {
 
     it('limit', async () => {
         const source = numbers();
-        strictEqual(await (await source.limit(5).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
+        strictEqual((await source.limit(5).pipe(arraySink())).toArray().join(','), '0,1,2,3,4');
         source.finalCheck();
     });
 
     it('skip', async () => {
         const source = numbers();
-        strictEqual(await (await source.skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
+        strictEqual((await source.skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
         source.finalCheck();
     });
 
@@ -444,7 +444,7 @@ describe(module.id, () => {
     function sleep(millis: number | (() => number)) {
         return async function <T>(val: T) {
             const ms = typeof millis === 'function' ? millis() : millis;
-            await fsleep(ms)
+            await fsleep(ms);
             return val;
         };
     }
@@ -457,34 +457,34 @@ describe(module.id, () => {
 
     it('simple chain (no buffer)', async () => {
         const source = numbers();
-        strictEqual(await (await source.skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
+        strictEqual((await source.skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
         source.finalCheck();
     });
     it('buffer in simple chain', async () => {
         let source: TestReader;
-        strictEqual(await (await (source = numbers()).buffer(3).skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
+        strictEqual((await (source = numbers()).buffer(3).skip(2).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
         source.finalCheck();
-        strictEqual(await (await (source = numbers()).skip(2).buffer(3).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
+        strictEqual((await (source = numbers()).skip(2).buffer(3).limit(5).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
         source.finalCheck();
-        strictEqual(await (await (source = numbers()).skip(2).limit(5).buffer(3).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
+        strictEqual((await (source = numbers()).skip(2).limit(5).buffer(3).pipe(arraySink())).toArray().join(','), '2,3,4,5,6');
         source.finalCheck();
     });
     it('buffer with slower input', async () => {
         const source = numbers();
-        strictEqual(await (await source.limit(10).map(sleep(20)).buffer(5).map(sleep(10)).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5,6,7,8,9');
+        strictEqual((await source.limit(10).map(sleep(20)).buffer(5).map(sleep(10)).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5,6,7,8,9');
         source.finalCheck();
     });
 
     it('buffer with faster input', async () => {
         const source = numbers();
-        strictEqual(await (await source.limit(10).map(sleep(10)).buffer(5).map(sleep(20)).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5,6,7,8,9');
+        strictEqual((await source.limit(10).map(sleep(10)).buffer(5).map(sleep(20)).pipe(arraySink())).toArray().join(','), '0,1,2,3,4,5,6,7,8,9');
         source.finalCheck();
     });
 
     it('parallel preserve order', async () => {
         const t0 = Date.now();
         const source = numbers();
-        strictEqual(await (await source.limit(10).parallel(4, function (src) {
+        strictEqual((await source.limit(10).parallel(4, function (src) {
             return src.map(sleep(rand(10, 10))).map(pow(2));
         }).pipe(arraySink())).toArray().join(','), '0,1,4,9,16,25,36,49,64,81');
         source.finalCheck();
@@ -495,7 +495,7 @@ describe(module.id, () => {
     it('parallel shuffle', async () => {
         const t0 = Date.now();
         const source = numbers();
-        strictEqual(await (await source.limit(10).parallel({
+        strictEqual((await source.limit(10).parallel({
             count: 4,
             shuffle: true,
         }, function (src) {
@@ -510,27 +510,39 @@ describe(module.id, () => {
 
     it('fork/join limit before', async () => {
         const source = numbers();
-        strictEqual(await (await source.limit(10).fork([
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(2)); },
-            function (src) { return src.buffer(Infinity).map(sleep(rand(10, 10))).map(pow(3)); },
+        strictEqual((await source.limit(10).fork([
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(2));
+            },
+            function (src) {
+                return src.buffer(Infinity).map(sleep(rand(10, 10))).map(pow(3));
+            },
         ]).join(minJoiner).pipe(arraySink())).toArray().join(','), '0,1,4,8,9,16,25,27,36,49,64,81,125,216,343,512,729');
         source.finalCheck();
     });
 
     it('fork/join limit after', async () => {
         const source = numbers();
-        strictEqual(await (await source.fork([
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(2)); },
-            function (src) { return src.buffer(Infinity).map(sleep(rand(10, 10))).map(pow(3)); },
+        strictEqual((await source.fork([
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(2));
+            },
+            function (src) {
+                return src.buffer(Infinity).map(sleep(rand(10, 10))).map(pow(3));
+            },
         ]).join(minJoiner).limit(12).pipe(arraySink())).toArray().join(','), '0,1,4,8,9,16,25,27,36,49,64,81');
         source.finalCheck();
     });
 
     it('fork/join limit one branch', async () => {
         const source = numbers();
-        strictEqual(await (await source.fork([
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(2)).limit(3); },
-            function (src) { return src.buffer(6).map(sleep(rand(10, 10))).map(pow(3)); },
+        strictEqual((await source.fork([
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(2)).limit(3);
+            },
+            function (src) {
+                return src.buffer(6).map(sleep(rand(10, 10))).map(pow(3));
+            },
         ]).join(minJoiner).limit(10).pipe(arraySink())).toArray().join(','), '0,1,4,8,27,64,125,216,343,512');
         source.finalCheck();
     });
@@ -538,8 +550,12 @@ describe(module.id, () => {
     it('fork slow and fast', async () => {
         const source = numbers();
         const readers = source.fork([
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(2)); },
-            function (src) { return src.map(sleep(rand(10, 10))).map(pow(3)); },
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(2));
+            },
+            function (src) {
+                return src.map(sleep(rand(10, 10))).map(pow(3));
+            },
         ]).readers;
         const f1 = run(async () => await readers[0]!.limit(10).pipe(arraySink()));
         const f2 = run(async () => await readers[1]!.limit(10).pipe(arraySink()));
@@ -551,8 +567,12 @@ describe(module.id, () => {
     it('fork slow and fast with different limits (fast ends first)', async () => {
         const source = numbers();
         const readers = source.fork([
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(2)).limit(10); },
-            function (src) { return src.map(sleep(rand(10, 10))).map(pow(3)).limit(4); },
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(2)).limit(10);
+            },
+            function (src) {
+                return src.map(sleep(rand(10, 10))).map(pow(3)).limit(4);
+            },
         ]).readers;
         const f1 = run(async () => await readers[0]!.pipe(arraySink()));
         const f2 = run(async () => await readers[1]!.pipe(arraySink()));
@@ -564,8 +584,12 @@ describe(module.id, () => {
     it('fork slow and fast with different limits (slow ends first)', async () => {
         const source = numbers();
         const readers = source.fork([
-            function (src) { return src.map(sleep(rand(10, 10))).map(pow(2)).limit(10); },
-            function (src) { return src.map(sleep(rand(20, 20))).map(pow(3)).limit(4); },
+            function (src) {
+                return src.map(sleep(rand(10, 10))).map(pow(2)).limit(10);
+            },
+            function (src) {
+                return src.map(sleep(rand(20, 20))).map(pow(3)).limit(4);
+            },
         ]).readers;
         const f1 = run(async () => await readers[0]!.pipe(arraySink()));
         const f2 = run(async () => await readers[1]!.pipe(arraySink()));

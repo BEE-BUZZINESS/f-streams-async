@@ -27,10 +27,8 @@
 ///
 /// `import * as f from 'f-streams'`
 ///
-import { run, wait } from 'f-promise-async';
 import * as nodeStream from 'stream';
 import * as sys from 'util';
-import { create as createUturn } from './devices/uturn';
 import { ParallelOptions, Reader } from './reader';
 
 export class Writer<T> {

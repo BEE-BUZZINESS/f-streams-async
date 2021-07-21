@@ -104,7 +104,7 @@ describe(module.id, () => {
                         return;
                     }
                 });
-                ok(false)
+                ok(false);
             } catch (ex) {
                 strictEqual(ex.message, 'read stream error');
             }
@@ -169,7 +169,7 @@ describe(module.id, () => {
                         return;
                     }
                 });
-                ok(false)
+                ok(false);
             } catch (ex) {
                 strictEqual(ex.message, 'read stream error');
             }

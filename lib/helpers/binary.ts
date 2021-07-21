@@ -295,28 +295,28 @@ export interface BinaryReader extends Reader {
     read(len?: number): Promise<Buffer | undefined>;
     readInt8(): Promise<number>;
     peekInt8(): Promise<number>;
-    unreadInt8(): Promise<void>;
+    unreadInt8(): void;
     readUInt8(): Promise<number>;
     peekUInt8(): Promise<number>;
-    unreadUInt8(): Promise<void>;
+    unreadUInt8(): void;
     readInt16(): Promise<number>;
     peekInt16(): Promise<number>;
-    unreadInt16(): Promise<void>;
+    unreadInt16(): void;
     readUInt16(): Promise<number>;
     peekUInt16(): Promise<number>;
-    unreadUInt16(): Promise<void>;
+    unreadUInt16(): void;
     readInt32(): Promise<number>;
     peekInt32(): Promise<number>;
-    unreadInt32(): Promise<void>;
+    unreadInt32(): void;
     readUInt32(): Promise<number>;
     peekUInt32(): Promise<number>;
-    unreadUInt32(): Promise<void>;
+    unreadUInt32(): void;
     readFloat(): Promise<number>;
     peekFloat(): Promise<number>;
-    unreadFloat(): Promise<void>;
+    unreadFloat(): void;
     readDouble(): Promise<number>;
     peekDouble(): Promise<number>;
-    unreadDouble(): Promise<void>;
+    unreadDouble(): void;
 }
 
 export interface BinaryWriter extends Writer {

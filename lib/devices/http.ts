@@ -1,4 +1,3 @@
-import * as http from 'http';
 import {
     createHttpServer,
     HttpClientOptions,
@@ -12,7 +11,6 @@ import {
     HttpServerRequest,
     HttpServerResponse,
 } from '../node-wrappers';
-import { Reader } from '../reader';
 import { Writer } from '../writer';
 import { fixOptions } from './node';
 

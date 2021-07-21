@@ -153,10 +153,10 @@ describe(module.id, () => {
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
         let r = await part.read();
         strictEqual(r.toString('binary'), 'C1', 'body C1');
-        sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
+        await sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
         r = await part.read();
         strictEqual(r, undefined, 'end of part 1');
-        sleep(1);
+        await sleep(1);
         strictEqual(await part.read(), undefined, 'end of part 1 again');
 
         part = await stream.read();
@@ -166,10 +166,10 @@ describe(module.id, () => {
         strictEqual(part.headers['content-type'], 'text/plain', 'content-type');
         r = await part.read();
         strictEqual(r.toString('binary'), 'C2', 'body C2');
-        sleep(1);
+        await sleep(1);
         r = await part.read();
         strictEqual(r, undefined, 'end of part 2');
-        sleep(1);
+        await sleep(1);
         strictEqual(await part.read(), undefined, 'end of part 2 again');
 
         part = await stream.read();
@@ -205,10 +205,10 @@ describe(module.id, () => {
         strictEqual(part.headers['content-disposition'], 'form-data; name="c1";', 'content-disposition');
         let r = await part.read();
         strictEqual(r.toString('binary'), 'C1', 'body C1');
-        sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
+        await sleep(1); // sleeps are here to let asynchrous operation like hk.notify occure
         r = await part.read();
         strictEqual(r, undefined, 'end of part 1');
-        sleep(1);
+        await sleep(1);
         strictEqual(await part.read(), undefined, 'end of part 1 again');
 
         part = await stream.read();
@@ -219,10 +219,10 @@ describe(module.id, () => {
         strictEqual(part.headers['content-disposition'], 'form-data; name="c2";', 'content-disposition');
         r = await part.read();
         strictEqual(r.toString('binary'), 'C2', 'body C2');
-        sleep(1);
+        await sleep(1);
         r = await part.read();
         strictEqual(r, undefined, 'end of part 2');
-        sleep(1);
+        await sleep(1);
         strictEqual(await part.read(), undefined, 'end of part 2 again');
 
         part = await stream.read();
