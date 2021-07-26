@@ -261,8 +261,8 @@ describe(module.id, () => {
     it('dup', async () => {
         const source = numbers(5);
         const streams = source.dup();
-        const f1 = run(async () => await streams[0].toArray());
-        const f2 = run(async () => await streams[1].toArray());
+        const f1 = streams[0].toArray();
+        const f2 = streams[1].toArray();
         strictEqual((await f1).join(','), '0,1,2,3,4');
         strictEqual((await f2).join(','), '0,1,2,3,4');
         source.finalCheck();
@@ -271,8 +271,8 @@ describe(module.id, () => {
     it('dup error 0', async () => {
         const source = numbers(5);
         const streams = source.dup();
-        const f1 = run(async () => await streams[0].map(fail(2)).toArray());
-        const f2 = run(async () => await streams[1].toArray());
+        const f1 = streams[0].map(fail(2)).toArray();
+        const f2 = streams[1].toArray();
         try {
             await f1;
             ok(false);
@@ -291,8 +291,8 @@ describe(module.id, () => {
     it('dup error 1', async () => {
         const source = numbers(5);
         const streams = source.dup();
-        const f1 = run(async () => await streams[0].toArray());
-        const f2 = run(async () => await streams[1].map(fail(2)).toArray());
+        const f1 = streams[0].toArray();
+        const f2 = streams[1].map(fail(2)).toArray();
         try {
             await f1;
             ok(false);
@@ -557,8 +557,8 @@ describe(module.id, () => {
                 return src.map(sleep(rand(10, 10))).map(pow(3));
             },
         ]).readers;
-        const f1 = run(async () => await readers[0]!.limit(10).pipe(arraySink()));
-        const f2 = run(async () => await readers[1]!.limit(10).pipe(arraySink()));
+        const f1 = readers[0]!.limit(10).pipe(arraySink());
+        const f2 = readers[1]!.limit(10).pipe(arraySink());
         strictEqual((await f1).toArray().join(','), '0,1,4,9,16,25,36,49,64,81');
         strictEqual((await f2).toArray().join(','), '0,1,8,27,64,125,216,343,512,729');
         source.finalCheck();
@@ -574,8 +574,8 @@ describe(module.id, () => {
                 return src.map(sleep(rand(10, 10))).map(pow(3)).limit(4);
             },
         ]).readers;
-        const f1 = run(async () => await readers[0]!.pipe(arraySink()));
-        const f2 = run(async () => await readers[1]!.pipe(arraySink()));
+        const f1 = readers[0]!.pipe(arraySink());
+        const f2 = readers[1]!.pipe(arraySink());
         strictEqual((await f1).toArray().join(','), '0,1,4,9,16,25,36,49,64,81');
         strictEqual((await f2).toArray().join(','), '0,1,8,27');
         source.finalCheck();
@@ -591,8 +591,8 @@ describe(module.id, () => {
                 return src.map(sleep(rand(20, 20))).map(pow(3)).limit(4);
             },
         ]).readers;
-        const f1 = run(async () => await readers[0]!.pipe(arraySink()));
-        const f2 = run(async () => await readers[1]!.pipe(arraySink()));
+        const f1 = readers[0]!.pipe(arraySink());
+        const f2 = readers[1]!.pipe(arraySink());
         strictEqual((await f1).toArray().join(','), '0,1,4,9,16,25,36,49,64,81');
         strictEqual((await f2).toArray().join(','), '0,1,8,27');
         source.finalCheck();

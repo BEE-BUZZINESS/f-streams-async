@@ -79,8 +79,8 @@ describe(module.id, () => {
     it('dup stops on 0 and continues on 1', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[0].limit(2).toArray());
-        const altF = run(async () => await dups[1].toArray());
+        const resultF = dups[0].limit(2).toArray();
+        const altF = dups[1].toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         strictEqual(result, '0,1');
@@ -91,8 +91,8 @@ describe(module.id, () => {
     it('dup stops on 1 and continues on 0', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[1].limit(2).toArray());
-        const altF = run(async () => await dups[0].toArray());
+        const resultF = dups[1].limit(2).toArray();
+        const altF = dups[0].toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         strictEqual(result, '0,1');
@@ -103,8 +103,8 @@ describe(module.id, () => {
     it('dup stops both silently from 0', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[0].limit(2, true).toArray());
-        const altF = run(async () => await dups[1].toArray());
+        const resultF = dups[0].limit(2, true).toArray();
+        const altF = dups[1].toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         strictEqual(result, '0,1');
@@ -115,8 +115,8 @@ describe(module.id, () => {
     it('dup stops both silently from 1', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[1].limit(2, true).toArray());
-        const altF = run(async () => await dups[0].toArray());
+        const resultF = dups[1].limit(2, true).toArray();
+        const altF = dups[0].toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         strictEqual(result, '0,1');
@@ -127,8 +127,8 @@ describe(module.id, () => {
     it('dup stops with error from 0', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[0].limit(2, new Error('testing')).toArray());
-        const altF = run(async () => await dups[1].toArray());
+        const resultF = dups[0].limit(2, new Error('testing')).toArray();
+        const altF = dups[1].toArray();
         const result = (await resultF).join();
         try {
             const alt = (await altF).join();
@@ -143,8 +143,8 @@ describe(module.id, () => {
     it('dup stops with error from 1', async () => {
         const source = numbers(5);
         const dups = source.dup();
-        const resultF = run(async () => await dups[1].limit(2, new Error('testing')).toArray());
-        const altF = run(async () => await dups[0].toArray());
+        const resultF = dups[1].limit(2, new Error('testing')).toArray();
+        const altF = dups[0].toArray();
         const result = (await resultF).join();
         try {
             const alt = (await altF).join();
@@ -159,8 +159,8 @@ describe(module.id, () => {
     it('dup stops 0 first, 1 later', async () => {
         const source = numbers(10);
         const dups = source.dup();
-        const resultF = run(async () => await dups[0].limit(2).toArray());
-        const altF = run(async () => await dups[1].limit(5).toArray());
+        const resultF = dups[0].limit(2).toArray();
+        const altF = dups[1].limit(5).toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         strictEqual(result, '0,1');
@@ -171,8 +171,8 @@ describe(module.id, () => {
     it('dup stops 1 first, 0 later', async () => {
         const source = numbers(10);
         const dups = source.dup();
-        const resultF = run(async () => await dups[1].limit(2).toArray());
-        const altF = run(async () => await dups[0].limit(5).toArray());
+        const resultF = dups[1].limit(2).toArray();
+        const altF = dups[0].limit(5).toArray();
         const result = (await resultF).join();
         const alt = (await altF).join();
         await wait(cb => setTimeout(cb, 0));

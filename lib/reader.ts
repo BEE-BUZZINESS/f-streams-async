@@ -276,10 +276,10 @@ export class Reader<T> {
                 } else if (!writeStop) {
                     // direct output is stopped.
                     // we continue to read it, to propagate to the secondary output
-                    run(async () => {
+                    ((async () => {
                         while (await readDirect() !== undefined);
-                    }).catch(err => {
-                        throw err;
+                    })()).catch(err => {
+                        console.error(`stop call failed: ${err.stack}`);
                     });
                 }
             },
@@ -354,9 +354,9 @@ export class Reader<T> {
         const uturn = require('./devices/uturn').create();
         function afterTransform(err?: any) {
             // stop parent at end
-            run(async () => await parent.stop()).then(() => uturn.end(err), e => uturn.end(err || e));
+            parent.stop().then(() => uturn.end(err), e => uturn.end(err || e));
         }
-        run(async () => await fn.call(null, parent, uturn.writer)).then(afterTransform, afterTransform);
+        (async () => fn.call(null, parent, uturn.writer))().then(afterTransform, afterTransform);
         return uturn.reader;
     }
 
@@ -583,7 +583,7 @@ export class Reader<T> {
             if (pending) return;
             let sync = true;
             pending = true;
-            run(async () => await this.read()).then(
+            this.read().then(
                 async result => {
                     pending = false;
                     if (result === undefined) {
@@ -851,7 +851,7 @@ export class StreamGroup<T> implements Stoppable {
             }
             const vals = values.filter(val => val !== undefined);
             if (vals.length === active) {
-                run(async () => await fn.call(null, values)).then(
+                (async () => fn.call(null, values))().then(
                     val => {
                         // be careful with re-entrancy
                         const rep = reply;

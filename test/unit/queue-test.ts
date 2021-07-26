@@ -18,13 +18,13 @@ describe(module.id, () => {
 
     it('write (lossless)', async () => {
         const q = queue(4);
-        const writeTask = run(async () => {
+        const writeTask = (async () => {
             for (let i = 0; i < 6; i++) await q.write(i);
             await q.write(undefined);
-        });
-        const readTask = run(async () => {
+        })();
+        const readTask = (async () => {
             return await q.reader.toArray();
-        });
+        })();
 
         await wait(writeTask);
         equal((await wait(readTask)).join(','), '0,1,2,3,4,5', 'full queue contents ok');
