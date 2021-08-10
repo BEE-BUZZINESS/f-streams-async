@@ -17,7 +17,7 @@
         "node": ">=14.0.0"
     },
     "dependencies": {
-        "f-promise-async": "git+https://github.com/sberthier/f-promise-async.git#a3d667e23d7883171723090b2a9ba5f65571ba62"
+        "f-promise-async": "^1.0.0"
     },
     "devDependencies": {
         "@types/chai": "^3.4.34",
