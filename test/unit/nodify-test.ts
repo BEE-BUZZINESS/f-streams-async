@@ -1,7 +1,9 @@
-import { assert } from 'chai';
-import { bufferConverter, cutter, stringConverter, stringWriter, textFileReader } from '../..';
+import * as chai from 'chai';
+import * as chaiAsPromised from 'chai-as-promised';
+import { binaryFileReader, cutter, Reader, stringConverter, stringWriter, textFileReader, Writer } from '../..';
 
-const { equal, ok, strictEqual, deepEqual } = assert;
+chai.use(chaiAsPromised);
+const { equal, isRejected } = chai.assert;
 
 const sample = __dirname + '/../../../test/fixtures/rss-sample.xml';
 const zlib = require('zlib');
@@ -12,7 +14,6 @@ describe(module.id, () => {
         let sampleReader2 = textFileReader(sample);
         const stringify = stringConverter();
         const cut = cutter(10);
-        const out = require('fs').createWriteStream(__dirname + '/../../../test/fixtures/rss-sample.zip');
         sampleReader2 = sampleReader2
             .nodeTransform(zlib.createGzip())
             .nodeTransform(zlib.createGunzip())
@@ -29,5 +30,19 @@ describe(module.id, () => {
         piped.on('finish', function() {
             equal(dest.toString(), expected);
         });
+    });
+    it('nodeTransform error chain', async () => {
+        const tranformFn = (shouldThrow: boolean) => {
+            return async (reader: Reader<Buffer>, writer: Writer<Buffer>): Promise<void> => {
+                if (shouldThrow) throw new Error('Error chain');
+                const transformer = zlib.createGzip();
+                await reader.nodeTransform(transformer).pipe(writer);
+            };
+        };
+
+        const r1 = binaryFileReader(sample);
+        const r3 = await r1.transform(tranformFn(true));
+        const r4 = await r3.transform(tranformFn(false));
+        await isRejected(r4.readAll(), 'Error chain');
     });
 });
