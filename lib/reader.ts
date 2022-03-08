@@ -27,7 +27,7 @@
 ///
 /// `import * as f from 'f-streams'`
 ///
-import { Callback, funnel, map, run, wait } from 'f-promise-async';
+import { Callback, funnel, map, wait } from 'f-promise-async';
 import * as nodeStream from 'stream';
 import { convert as predicate } from './predicate';
 import * as stopException from './stop-exception';

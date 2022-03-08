@@ -512,6 +512,7 @@ export interface HttpServerOptions extends ReadableOptions, WritableOptions, Enc
         listener: (request: http.IncomingMessage, response: http.ServerResponse) => void,
     ) => http.Server | https.Server;
     secure?: boolean;
+    withContext?: boolean;
 }
 
 export class HttpServerRequest extends ReadableStream<http.IncomingMessage> {
@@ -699,21 +700,27 @@ export class Server<EmitterT extends ServerEmitter> extends Wrapper<EmitterT> {
 /// * `server.listen(path)`
 ///   (same as `http.Server`)
 
-export type HttpListener = (request: HttpServerRequest, response: HttpServerResponse) => void;
+export type HttpListener = (request: HttpServerRequest, response: HttpServerResponse) => void | Promise<void>;
 
 export function httpListener(listener: HttpListener, options: HttpServerOptions) {
     options = options || {};
-    return (request: http.IncomingMessage, response: http.ServerResponse) => {
-        return run(async () =>
-            await withContext(
-                async () => listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options)),
-                {},
-            ),
-        ).catch(err => {
+    return async (request: http.IncomingMessage, response: http.ServerResponse) => {
+        try {
+            if (options.withContext) {
+                await run(async () =>
+                    await withContext(
+                        async () => listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options)),
+                        {},
+                    ),
+                );
+            } else {
+                await listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options))
+            }
+        } catch (err) {
             // handlers do not read GET requests - so we remove the listeners, in case
             if (!/^(post|put)$/i.test(request.method || 'get')) request.removeAllListeners();
             if (err) throw err;
-        });
+        }
     };
 }
 
@@ -1183,8 +1190,12 @@ export class SocketClient {
 /// * `server.listen(path)`
 ///   (same as `net.Server`)
 
-export interface SocketServerOptions {}
-export type SocketServerListener = (stream: SocketStream) => void;
+export interface SocketServerOptions { 
+    allowHalfOpen?: boolean; // from net.d.ts
+    pauseOnConnect?: boolean; // from net.d.ts
+    withContext?: boolean; // local
+}
+export type SocketServerListener = (stream: SocketStream) => void | Promise<void>;
 
 export function createNetServer(
     serverOptions: SocketServerOptions,
@@ -1205,13 +1216,17 @@ export class SocketServer extends Server<net.Server> {
             connectionListener = serverOptions as (stream: SocketStream) => void;
             serverOptions = {};
         }
-        const emitter = net.createServer(serverOptions, connection =>
-            run(async () =>
-                await withContext(async () => connectionListener(new SocketStream(connection, streamOptions || {})), {}),
-            ).catch(err => {
-                if (err) throw err;
-            }),
-        );
+        const emitter = net.createServer(serverOptions, async connection => {
+            if (serverOptions.withContext) {
+                await run(async () =>
+                    await withContext(async () => connectionListener(new SocketStream(connection, streamOptions || {})), {}),
+                ).catch(err => {
+                    if (err) throw err;
+                });
+            } else {
+                await connectionListener(new SocketStream(connection, streamOptions || {}));
+            }
+        });
         super(emitter);
     }
 }
