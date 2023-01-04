@@ -33,7 +33,7 @@ export class StringWriter extends Writer<string> {
 
 /// * `reader = stringReader(text, options)`
 ///   creates a reader that reads its chunks from `text`.
-///   `reader.read()` will return the chunks asynchronously by default.
+///   `await reader.read()` will return the chunks asynchronously by default.
 ///   You can force synchronous delivery by setting `options.sync` to `true`.
 ///   The default chunk size is 1024. You can override it by passing
 ///   a `chunkSize` option.

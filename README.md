@@ -95,7 +95,7 @@ But you don't have to do it. There are already f-streams-async _devices_ for man
 You can read from a reader by calling its `read` method and you can write to a writer by calling its `write` method:
 
 ```typescript
-var val = await reader.read();
+const val = await reader.read();
 await writer.write(val);
 ```
 
@@ -198,7 +198,7 @@ Here is a typical use:
 ```typescript
 import { stringWriter } from 'f-streams-async';
 
-var result = (await numberReader(100)
+const result = (await numberReader(100)
     .map(function(n) {
         return n + ' ';
     })
@@ -217,7 +217,7 @@ import { genericReader } from 'f-streams-async';
 
 const infiniteReader = () => {
     let i = 0;
-    return genericReader(() => {
+    return genericReader(async () => {
         return i++;
     });
 };
@@ -270,26 +270,26 @@ You have complete freedom to organize your read and write calls: you can read se
 Also, you are not limited to reading with the `read()` call, you can use any API available on a reader, even another transform. For example, here is how you can implement a simple CSV parser:
 
 ```typescript
-const csvParser = (reader, writer) => {
+const csvParser = async (reader, writer) => {
     // get a lines parser from our transforms library
     const linesParser = fst.transforms.lines.parser();
     // transform the raw text reader into a lines reader
     reader = reader.transform(linesParser);
     // read the first line and split it to get the keys
-    var keys = reader.read().split(',');
+    const keys = (await reader.read()).split(',');
     // read the other lines
-    reader.forEach(function(line) {
+    await reader.forEach(async (line) => {
         // ignore empty line (we get one at the end if file is terminated by newline)
         if (line.length === 0) return;
         // split the line to get the values
-        var values = line.split(',');
+        const values = line.split(',');
         // convert it to an object with the keys that we got before
-        var obj = {};
+        const obj = {};
         keys.forEach(function(key, i) {
             obj[key] = values[i];
         });
         // send the object downwards.
-        writer.write(obj);
+        await writer.write(obj);
     });
 };
 ```
@@ -299,7 +299,7 @@ You can then use this transform as:
 ```typescript
 import { consoleLog, textFileReader } from 'f-streams-async';
 
-textFileReader('mydata.csv')
+await textFileReader('mydata.csv')
     .transform(csvParser)
     .pipe(consoleLog);
 ```
