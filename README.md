@@ -1,27 +1,29 @@
 # Easy Streams for node.js
 
-f-streams is a simple but powerful streaming library for node.js.
+f-streams-async is a simple but powerful streaming library for node.js.
 
-F-streams come in two flavors: _readers_ and _writers_. You pull data from _readers_ and you push data into _writers_.
+This package has been forked from original [f-streams](https://github.com/Sage/f-streams) and adapted to be compliant with standard async/await instead of Fibers.
+
+F-streams-async come in two flavors: _readers_ and _writers_. You pull data from _readers_ and you push data into _writers_.
 
 The data that you push or pull may be anything: buffers and strings of course, but also simple values like numbers or Booleans, JavaScript objects, nulls, ...
 There is only one value which has a special meaning: `undefined`. Reading `undefined` means that you have reached the end of a reader stream.
 Writing `undefined` signals that you want to _end_ a writer stream.
 
-F-streams use the [f-promise](https://github.com/Sage/f-promise) library.
+F-streams-async use the [f-promise-async](https://github.com/s.berthier/f-promise-async) library.
 
 ## Installation
 
 ```sh
-npm install f-streams
+npm install f-streams-async
 ```
 
 ## Creating a stream
 
-`f-streams` bundles streams for node APIs:
+`f-streams-async` bundles streams for node APIs:
 
 ```typescript
-import { consoleLog, stdInput, textFileReader, binaryFileWriter, stringReader } from 'f-streams';
+import { consoleLog, stdInput, textFileReader, binaryFileWriter, stringReader } from 'f-streams-async';
 
 const log = consoleLog; // console writer
 const stdin = stdInput('utf8'); // stdin in text mode
@@ -33,29 +35,29 @@ const stringRd = stringReader(text); // in memory text reader
 You can also wrap any node.js stream into an f-stream, with the `node` device. For example:
 
 ```typescript
-import { nodeReader, nodeWriter } from 'f-streams';
+import { nodeReader, nodeWriter } from 'f-streams-async';
 
 const reader = nodeReader(fs.createReadStream(path)); // same as binaryFileReader
 const writer = nodeWriter(fs.createWriteStream(path)); // same as binaryFileWriter
 ```
 
-`f-streams` also provides wrappers for HTTP and socket clients and servers:
+`f-streams-async` also provides wrappers for HTTP and socket clients and servers:
 
 ```typescript
-import { httpClient, httpServer } from 'f-streams';
-import { socketClient, socketServer } from 'f-streams';
+import { httpClient, httpServer } from 'f-streams-async';
+import { socketClient, socketServer } from 'f-streams-async';
 ```
 
 Request and response objects for these clients and servers are readers and writers.
 
-The `genericReader` and `genericWriter` functions lets you create your own f-streams. For example here is how you would implement a reader that returns numbers from 0 to n
+The `genericReader` and `genericWriter` functions lets you create your own f-streams-async. For example here is how you would implement a reader that returns numbers from 0 to n
 
 ```typescript
-import { genericReader } from 'f-streams';
+import { genericReader } from 'f-streams-async';
 
-const numberReader = function(n) {
-    var i = 0;
-    return genericReader(function read() {
+const numberReader = (n) => {
+    let i = 0;
+    return genericReader(async () => {
         if (i < n) return i++;
         else return undefined;
     });
@@ -66,39 +68,38 @@ To define your own reader you just need to pass an asynchronous `read() {...}` f
 
 To define your own writer you just need to pass an asynchronous `write(val) {...}` function to `genericWriter`.
 
-So, for example, here is how you can wrap mongodb APIs into f-streams:
+So, for example, here is how you can wrap mongodb APIs into f-streams-async:
 
 ```typescript
-import { wait } from 'f-promise';
-import { genericReader, genericWriter } from 'f-streams';
+import { genericReader, genericWriter } from 'f-streams-async';
 
-const reader = function(cursor) {
-    return genericReader(function() {
-        var obj = wait(cursor.nextObject());
+const reader = (cursor) => {
+    return genericReader(async () => {
+        const obj = await cursor.nextObject();
         return obj == null ? undefined : obj;
     });
 };
-const writer = function(collection) {
-    var done;
-    return genericWriter(function(val) {
+const writer = (collection) => {
+    let done;
+    return genericWriter(async (val) => {
         if (val === undefined) done = true;
-        if (!done) wait(collection.insert(val));
+        if (!done) await collection.insert(val);
     });
 };
 ```
 
-But you don't have to do it. There are already f-streams _devices_ for MongoDB and popular databases. See [below](#database-support).
+But you don't have to do it. There are already f-streams-async _devices_ for many use cases.
 
 ## Basic read and write
 
 You can read from a reader by calling its `read` method and you can write to a writer by calling its `write` method:
 
 ```typescript
-var val = reader.read();
-writer.write(val);
+var val = await reader.read();
+await writer.write(val);
 ```
 
-The `read` and `write` methods may be asynchronous. If they are, they should be implemented with the `f-promise` library.
+The `read` and `write` methods may be asynchronous.
 
 `read` returns `undefined` at the end of a stream. Symmetrically, passing `undefined` to the `write` method of a writer ends the writer.
 
@@ -110,14 +111,14 @@ You can treat an f-reader very much like a JavaScript array: you can filter it, 
 console.log(
     'pi~=' +
         4 *
-            numberReader(10000)
-                .filter(function(n) {
+            await numberReader(10000)
+                .filter((n) => {
                     return n % 2; // keep only odd numbers
                 })
-                .map(function(n) {
+                .map((n) => {
                     return n % 4 === 1 ? 1 / n : -1 / n;
                 })
-                .reduce(function(res, val) {
+                .reduce((res, val) => {
                     return res + val;
                 }, 0),
 );
@@ -137,14 +138,15 @@ So this is very useful.
 The Array-like API also includes `every`, `some` and `forEach`.
 On the other hand it does not include `reduceRight` nor `sort`, as these functions are incompatible with streaming (they would need to buffer the entire stream).
 
-The `forEach`, `every` and `some` functions are reducers and return when the stream has been completely processed, like `reduce` (see example further down).
+The `forEach`, `every`, `find` and `some` functions are reducers and return when the stream has been completely processed, like `reduce` (see example further down),
+ so they are asynchronous and need to be awaited.
 
 Note: the `filter`, `every` and `some` methods can also be controlled by a mongodb filter condition rather than a function.
 The following are equivalent:
 
 ```typescript
 // filter expressed as a function
-reader = numberReader(1000).filter(function(n) {
+reader = numberReader(1000).filter((n) => {
     return n >= 10 && n < 20;
 });
 
@@ -170,15 +172,15 @@ for (const val of numberReader(1000)) {
 Readers have a `pipe` method that lets you pipe them into a writer:
 
 ```typescript
-reader.pipe(writer);
+await reader.pipe(writer);
 ```
 
 For example we can output the odd numbers up to 100 to the console by piping the number reader to the console device:
 
 ```typescript
-import { consoleLog } from 'f-streams';
+import { consoleLog } from 'f-streams-async';
 
-numberReader(100)
+await numberReader(100)
     .filter(n => {
         return n % 2; // keep only odd numbers
     })
@@ -188,18 +190,19 @@ numberReader(100)
 Note that `pipe` is also a reducer. So you can schedule operations which will be executed after the pipe has been fully processed.
 
 A major difference with standard node streams is that `pipe` operations only appear once in a chain, at the end, instead of being inserted between processing steps.
-The f-streams `pipe` does not return a reader.
+The f-streams-async `pipe` does not return a reader.
 Instead it returns its writer argument, so that you can chain other operations on the writer itself.
+It is asynchronous and needs to be awaited.
 Here is a typical use:
 
 ```typescript
-import { stringWriter } from 'f-streams';
+import { stringWriter } from 'f-streams-async';
 
-var result = numberReader(100)
+var result = (await numberReader(100)
     .map(function(n) {
         return n + ' ';
     })
-    .pipe(stringWriter())
+    .pipe(stringWriter()))
     .toString();
 ```
 
@@ -210,11 +213,11 @@ In this example, the integers are mapped to strings which are written to an in-m
 You can easily create an infinite stream. For example, here is a reader stream that will return all numbers (\*) in sequence:
 
 ```typescript
-import { genericReader } from 'f-streams';
+import { genericReader } from 'f-streams-async';
 
-var infiniteReader = function() {
-    var i = 0;
-    return genericReader(function read() {
+const infiniteReader = () => {
+    let i = 0;
+    return genericReader(() => {
         return i++;
     });
 };
@@ -222,20 +225,20 @@ var infiniteReader = function() {
 
 (\*): not quite as `i++` will stop moving when `i` reaches 2\*\*53
 
-F-streams have methods like `skip`, `limit`, `until` and `while` that let you control how many entries you will read, even if the stream is potentially infinite. Here are two examples:
+F-streams-async have methods like `skip`, `limit`, `until` and `while` that let you control how many entries you will read, even if the stream is potentially infinite. Here are two examples:
 
 ```typescript
-import { consoleLog } from 'f-streams';
+import { consoleLog } from 'f-streams-async';
 
 // output 100 numbers after skipping the first 20
-infiniteReader()
+await infiniteReader()
     .skip(20)
     .limit(100)
     .pipe(consoleLog);
 
 // output numbers until their square exceeds 1000
-infiniteReader()
-    .until(function(n) {
+await infiniteReader()
+    .until((n) => {
         return n * n > 1000;
     })
     .pipe(consoleLog);
@@ -254,10 +257,10 @@ The `transform` function is designed to handle these more complex operations.
 Typical code looks like:
 
 ```typescript
-stream.transform(function(reader, writer) {
-	// read items with reader.read()
+await stream.transform(async (reader, writer) => {
+	// read items with `await reader.read()`
 	// transform them (combine them, split them)
-	// write transformation results with writer.write(result)
+	// write transformation results with `await writer.write(result)`
 	// repeat until the end of reader
 }).filter(...).map(...).reduce(...);
 ```
@@ -267,9 +270,9 @@ You have complete freedom to organize your read and write calls: you can read se
 Also, you are not limited to reading with the `read()` call, you can use any API available on a reader, even another transform. For example, here is how you can implement a simple CSV parser:
 
 ```typescript
-var csvParser = function(reader, writer) {
+const csvParser = (reader, writer) => {
     // get a lines parser from our transforms library
-    var linesParser = fst.transforms.lines.parser();
+    const linesParser = fst.transforms.lines.parser();
     // transform the raw text reader into a lines reader
     reader = reader.transform(linesParser);
     // read the first line and split it to get the keys
@@ -294,7 +297,7 @@ var csvParser = function(reader, writer) {
 You can then use this transform as:
 
 ```typescript
-import { consoleLog, textFileReader } from 'f-streams';
+import { consoleLog, textFileReader } from 'f-streams-async';
 
 textFileReader('mydata.csv')
     .transform(csvParser)
@@ -332,26 +335,26 @@ The transforms library is rather embryonic at this stage but you can expect it t
 
 ## Interoperability with native node.js streams
 
-`f-streams` are fully interoperable with native node.js streams.
+`f-streams-async` are fully interoperable with native node.js streams.
 
 You can convert a node.js stream to an _f_ stream:
 
 ```typescript
-imoprt { nodeReader, nodeWriter } from 'f-streams';
+import { nodeReader, nodeWriter } from 'f-streams-async';
 
 // converting a node.js readable stream to an f reader
-var reader = nodeReader(stream);
+const reader = nodeReader(stream);
 // converting a node.js writable stream to an f writer
-var writer = nodeWriter(stream);
+const writer = nodeWriter(stream);
 ```
 
 You can also convert in the reverse direction, from an _f_ stream to a node.js stream:
 
 ```typescript
 // converting an f reader to a node readable stream
-var stream = reader.nodify();
+const stream = reader.nodify();
 // converting an f writer to a node writable stream
-var stream = writer.nodify();
+const stream = writer.nodify();
 ```
 
 And you can transform an _f_ stream with a node duplex stream:
@@ -366,11 +369,11 @@ reader = reader.nodeTransform(duplexStream);
 It is often handy to be able to look ahead in a stream when implementing parsers.
 The reader API does not directly support lookahead but it includes a `peekable()` method which extends the stream with `peek` and `unread` methods:
 
-```
+```typescript
 // reader does not support lookahead methods but peekableReader will.
-var peekableReader = reader.peekable();
-val = peekableReader.peek(); // reads a value without consuming it.
-val = peekableReader.read(); // normal read
+const peekableReader = reader.peekable();
+val = await peekableReader.peek(); // reads a value without consuming it.
+val = await peekableReader.read(); // normal read
 peekableReader.unread(val); // pushes back val so that it can be read again.
 ```
 
@@ -379,7 +382,7 @@ peekableReader.unread(val); // pushes back val so that it can be read again.
 You can parallelize operations on a stream with the `parallel` call:
 
 ```typescript
-reader
+await reader
     .parallel(4, function(source) {
         return source.map(fn1).transform(trans1);
     })
@@ -399,14 +402,14 @@ By default it is false and the order is preserved but you can get better thoughp
 You can also fork a reader into a set of identical readers that you pass through different chains:
 
 ```typescript
-var readers = reader.fork([
-    function(source) {
+const readers = reader.fork([
+    (source) => {
         return source.map(fn1).transform(trans1);
     },
-    function(source) {
+    (source) => {
         return source.map(fn2);
     },
-    function(source) {
+    (source) => {
         return source.transform(trans3);
     },
 ]).readers;
@@ -416,20 +419,20 @@ This returns 3 streams which operate on the same input but perform different cha
 You can then pipe these 3 streams to different outputs.
 
 Note that you have to use futures (or callbacks) when piping these streams so that they are piped in parallel.
-See the examples in the [`api-test.ts`](https://github.com/Sage/f-streams/blob/master/test/server/api-test.ts) test file for some examples.
+See the examples in the [`api-test.ts`](./test/server/api-test.ts) test file for some examples.
 
 You can also `join` the group of streams created by a fork, with a joiner function that defines how entries are dequeued from the group.
 
 ```typescript
-var streams = reader
+const streams = await reader
     .fork([
-        function(source) {
+        (source) => {
             return source.map(fn1).transform(trans1);
         },
-        function(source) {
+        (source) => {
             return source.map(fn2);
         },
-        function(source) {
+        (source) => {
             return source.transform(trans3);
         },
     ])
@@ -447,7 +450,7 @@ You can naturally use try/catch:
 
 ```typescript
 try {
-    textFileReader('users.csv')
+    await textFileReader('users.csv')
         .transform(csvParser())
         .filter(item => item.gender === 'F')
         .transform(jsonFormatter({ space: '\t' }))
@@ -467,7 +470,7 @@ Streams that wrap node stream will release their event listeners when they recei
 The stop API is a simple `stop` method on readers:
 
 ```typescript
-reader.stop(arg); // arg is optional - see below
+await reader.stop(arg); // arg is optional - see below
 ```
 
 Stopping becomes a bit tricky when a stream has been forked or teed.
@@ -500,9 +503,9 @@ For example:
 
 ```typescript
 // create a binary file writer
-var rawWriter = binaryFileWriter('data.gzip');
+const rawWriter = binaryFileWriter('data.gzip');
 // create another writer that applies a gzip transform before the file writer
-var zipWriter = rawWriter.pre.nodeTransform(zlib.createGzip());
+const zipWriter = rawWriter.pre.nodeTransform(zlib.createGzip());
 ```
 
 All the chainable operations available on readers (`map`, `filter`, `transform`, `nodeTransform`, ...)
@@ -513,34 +516,23 @@ writing to the original writer, even though it appears _after_ in the chain.
 
 ## Backpressure
 
-Backpressure is a non-issue. The f-streams plumbing takes care of the low level pause/resume dance on the reader side, and of the write/drain dance on the write side.
+Backpressure is a non-issue. The f-streams-async plumbing takes care of the low level pause/resume dance on the reader side, and of the write/drain dance on the write side.
 The event loop takes care of the rest.
-So you don't have to worry about backpressure when writing f-streams code.
+So you don't have to worry about backpressure when writing f-streams-async code.
 
 Instead of worrying about backpressure, you should worry about buffering.
 You can control buffering on the source side by passing special options to `nodeReader(nodeStream, options)`.
-See the [`node-wrappers`](https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md) documentation (`ReadableStream`) for details.
+See the [`node-wrappers`](./lib/node-wrappers.md) documentation (`ReadableStream`) for details.
 You can also control buffering by injecting `buffer(max)` calls into your chains.
 The typical pattern is:
 
 ```typescript
-reader
+await reader
     .transform(T1)
     .buffer(N)
     .transform(T2)
     .pipe(writer);
 ```
-
-## Database support
-
-It is easy to interface f-streams with node.js database drivers.
-Database support was bundled with f-streams until version 0.1.6 but it is now provided through separate node.js packages.
-The following packages are published to NPM:
-
--   [f-mongodb](https://github.com/Sage/f-mongodb): MongoDB native driver
--   [f-mysql](https://github.com/Sage/f-mysql): MySQL driver
--   [f-oracle](https://github.com/Sage/f-oracle): node-oracle driver
--   [f-tedious](https://github.com/Sage/f-tedious): Microsoft SQL Server _tedious_ driver
 
 ## API
 

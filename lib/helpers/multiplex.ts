@@ -1,7 +1,7 @@
 /// !doc
 /// ## helpers for multiplex readers
 ///
-/// `import { multiplexReader } from 'f-streams'`
+/// `import { multiplexReader } from 'f-streams-async'`
 import { Reader } from '../reader';
 
 ///

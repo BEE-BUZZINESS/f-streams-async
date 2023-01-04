@@ -17,9 +17,6 @@
 ///
 /// For more information on this design,
 /// see [this blog post](http://bjouhier.wordpress.com/2011/04/25/asynchronous-episode-3-adventures-in-event-land/)
-///
-/// For a simple example of this API in action,
-/// see the [google client example](../../../examples/streams/googleClient._js)
 import { run, wait, withContext } from 'f-promise-async';
 import * as http from 'http';
 import * as https from 'https';
@@ -251,7 +248,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         if (enc) this._emitter.setEncoding(enc);
         return this;
     }
-    /// * `data = stream.read([len])`
+    /// * `data = await stream.read([len])`
     ///   reads asynchronously from the stream and returns a `string` or a `Buffer` depending on the encoding.
     ///   If a `len` argument is passed, the `read` call returns when `len` characters or bytes
     ///   (depending on encoding) have been read, or when the underlying stream has emitted its `end` event
@@ -280,7 +277,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         }
         return this._concat(chunks, total);
     }
-    /// * `data = stream.readAll()`
+    /// * `data = await stream.readAll()`
     ///   reads till the end of stream.
     ///   Equivalent to `stream.read(-1)`.
     async readAll() {
@@ -389,7 +386,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         });
     }
 
-    /// * `stream.write(data[, enc])`
+    /// * `await stream.write(data[, enc])`
     ///   Writes the data.
     ///   This operation is asynchronous because it _drains_ the stream if necessary.
     ///   Returns `this` for chaining.
@@ -696,8 +693,8 @@ export class Server<EmitterT extends ServerEmitter> extends Wrapper<EmitterT> {
 ///   `requestListener` is called as `requestListener(request, response)`
 ///   where `request` and `response` are wrappers around `http.ServerRequest` and `http.ServerResponse`.
 ///   A fresh empty global context is set before every call to `requestListener`. See [Global context API](https://github.com/Sage/streamline-runtime/blob/master/index.md).
-/// * `server.listen(port[, host])`
-/// * `server.listen(path)`
+/// * `await server.listen(port[, host])`
+/// * `await server.listen(path)`
 ///   (same as `http.Server`)
 
 export type HttpListener = (request: HttpServerRequest, response: HttpServerResponse) => void | Promise<void>;
@@ -750,7 +747,7 @@ export class HttpServer extends Server<http.Server | https.Server> {
 /// * `response = new HttpClientResponse(resp, options)`
 ///   wraps a node response object.
 ///   `options.detectEncoding` and be used to control encoding detection (see section below).
-/// * `response = request.response()`
+/// * `response = await request.response()`
 ///    returns the response stream.
 
 export interface HttpClientResponseOptions extends ReadableOptions, WritableOptions, EncodingOptions {}
@@ -967,7 +964,7 @@ export class HttpClientRequest extends WritableStream<http.ClientRequest> {
         }
     }
 
-    /// * `response = request.response()`
+    /// * `response = await request.response()`
     ///    returns the response.
     async response() {
         const response = this._response || await wait(this._responseCb.bind(this));
@@ -1186,11 +1183,11 @@ export class SocketClient {
 ///   `connectionListener` is called as `connectionListener(stream)`
 ///   where `stream` is a `NetStream` wrapper around the native connection.
 ///   A fresh empty global context is set before every call to `connectionListener`. See [Global context API](https://github.com/Sage/streamline-runtime/blob/master/index.md).
-/// * `server.listen(port[, host])`
-/// * `server.listen(path)`
+/// * `await server.listen(port[, host])`
+/// * `await server.listen(path)`
 ///   (same as `net.Server`)
 
-export interface SocketServerOptions { 
+export interface SocketServerOptions {
     allowHalfOpen?: boolean; // from net.d.ts
     pauseOnConnect?: boolean; // from net.d.ts
     withContext?: boolean; // local
@@ -1280,7 +1277,7 @@ exports.usingWritable = function(
     return exports.using.call(this, WritableStream, emitter, options, fn);
 };
 
-/// * `streams.pump(inStream, outStream)`
+/// * `await streams.pump(inStream, outStream)`
 ///    Pumps from `inStream` to `outStream`.
 ///    Does not close the streams at the end.
 exports.pump = async function(inStream: ReadableStream<any>, outStream: WritableStream<any>) {

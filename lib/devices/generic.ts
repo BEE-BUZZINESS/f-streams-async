@@ -3,7 +3,7 @@ import { Writer } from '../writer';
 
 /// ## Special streams
 ///
-/// `import { emptyReader, emptyWriter } from 'f-streams'`
+/// `import { emptyReader, emptyWriter } from 'f-streams-async'`
 ///
 /// * `emptyReader` deprecated, use createEmptyReader()
 /// * `emptyWriter` deprecated, use createEmptyWriter()
@@ -19,7 +19,7 @@ export const empty = {
 /// !doc
 /// ## Generic stream constructors
 ///
-/// `import { genericReader, genericWriter } from 'f-streams'`
+/// `import { genericReader, genericWriter } from 'f-streams-async'`
 ///
 /// * `reader = genericReader(read[, stop])`
 ///   creates a reader from a given `read()` function and an optional `stop([arg])` function.

@@ -29,7 +29,7 @@
 ///
 /// ## API
 ///
-/// `import { xmlParser, xmlFormatter }from 'f-streams'`
+/// `import { xmlParser, xmlFormatter }from 'f-streams-async'`
 ///
 import { Reader } from '../reader';
 import { Writer } from '../writer';

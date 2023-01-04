@@ -6,7 +6,7 @@ import * as node from './node';
 /// !doc
 /// ## File based EZ streams
 ///
-/// `import { textFileReader, textFileWriter, binaryFileReader, binaryFileWriter, directoryReader} from 'f-streams'`
+/// `import { textFileReader, textFileWriter, binaryFileReader, binaryFileWriter, directoryReader} from 'f-streams-async'`
 ///
 export const text = {
     /// * `reader = textFileReader(path, encoding)`
