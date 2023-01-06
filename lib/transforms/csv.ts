@@ -1,7 +1,7 @@
 /// !doc
 /// ## Stream transform for CSV files
 ///
-/// `import { csvParser, csvFormatter } from 'f-streams'`
+/// `import { csvParser, csvFormatter } from 'f-streams-async'`
 ///
 import { Reader } from '../reader';
 import { Writer } from '../writer';

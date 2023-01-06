@@ -1,7 +1,7 @@
 /// !doc
 /// ## Encoding mappers
 ///
-/// `import { stringConverter, bufferConverter } from 'f-streams'`
+/// `import { stringConverter, bufferConverter } from 'f-streams-async'`
 ///
 
 /// * `mapper = stringConverter(encoding)`

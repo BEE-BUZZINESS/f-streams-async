@@ -1,7 +1,7 @@
 /// !doc
 /// ## Stream transform for line-oriented text streams
 ///
-/// `import { linesParser, linesFormatter } from 'f-streams'`
+/// `import { linesParser, linesFormatter } from 'f-streams-async'`
 ///
 /// * `transform = linesParser(options)`
 ///   creates a parser transform.

@@ -5,7 +5,7 @@ import { Writer } from '../writer';
 /// !doc
 /// ## In-memory string streams
 ///
-/// `import { stringReader, stringWriter } from 'f-streams'`
+/// `import { stringReader, stringWriter } from 'f-streams-async'`
 ///
 
 export interface Options {
@@ -33,7 +33,7 @@ export class StringWriter extends Writer<string> {
 
 /// * `reader = stringReader(text, options)`
 ///   creates a reader that reads its chunks from `text`.
-///   `reader.read()` will return the chunks asynchronously by default.
+///   `await reader.read()` will return the chunks asynchronously by default.
 ///   You can force synchronous delivery by setting `options.sync` to `true`.
 ///   The default chunk size is 1024. You can override it by passing
 ///   a `chunkSize` option.
@@ -57,9 +57,9 @@ export function reader(text: string, options?: Options | number) {
 }
 /// * `writer = stringWriter(options)`
 ///   creates a writer that collects strings into a text buffer.
-///   `writer.write(data)` will write asynchronously by default.
+///   `await writer.write(data)` will write asynchronously by default.
 ///   You can force synchronous write by setting `options.sync` to `true`.
-///   `writer.toString()` returns the internal text buffer into which the
+///   `await writer.toString()` returns the internal text buffer into which the
 ///   strings have been collected.
 export function writer(options?: Options) {
     return new StringWriter(options || {});
@@ -67,11 +67,11 @@ export function writer(options?: Options) {
 
 export function factory(url: string) {
     return {
-        /// * `reader = factory.reader()`
+        /// * `reader = await factory.reader()`
         reader: async () => {
             return module.exports.reader(url.substring(url.indexOf(':') + 1));
         },
-        /// * `writer = factory.writer()`
+        /// * `writer = await factory.writer()`
         writer: async () => {
             return module.exports.writer();
         },

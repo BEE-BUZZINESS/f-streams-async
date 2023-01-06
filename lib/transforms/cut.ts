@@ -1,7 +1,7 @@
 /// !doc
 /// ## Transform to cut string and binary streams
 ///
-/// `import { cutter } from 'f-streams'`
+/// `import { cutter } from 'f-streams-async'`
 import { Reader } from '../reader';
 import { Writer } from '../writer';
 ///

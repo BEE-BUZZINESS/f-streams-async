@@ -11,7 +11,7 @@ function consoleWriter(fn: (message: string) => void) {
 /// !doc
 /// ## Console EZ streams
 ///
-/// `import { consoleLog, consoleInfo, consoleWarn, consoleError } from 'f-streams'`
+/// `import { consoleLog, consoleInfo, consoleWarn, consoleError } from 'f-streams-async'`
 /// * `consoleLog`
 /// * `consoleInfo`
 /// * `consoleWarn`

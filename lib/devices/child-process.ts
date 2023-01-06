@@ -1,7 +1,7 @@
 /// !doc
 /// ## EZ Stream wrappers for node child processes
 ///
-/// `import { childProcessReader, childProcessWriter} from 'f-streams'`
+/// `import { childProcessReader, childProcessWriter} from 'f-streams-async'`
 ///
 import { ChildProcess } from 'child_process';
 import { wait } from 'f-promise-async';

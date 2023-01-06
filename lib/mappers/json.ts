@@ -1,7 +1,7 @@
 /// !doc
 /// ## JSON mappers
 ///
-/// `import { simpleJsonParser, simpleJsonFormatter } from 'f-streams'`
+/// `import { simpleJsonParser, simpleJsonFormatter } from 'f-streams-async'`
 ///
 
 /// * `mapper = simpleJsonParser(options)`

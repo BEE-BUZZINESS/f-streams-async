@@ -25,7 +25,7 @@
 /// !doc
 /// ## EZ Streams core writer API
 ///
-/// `import * as f from 'f-streams'`
+/// `import * as f from 'f-streams-async'`
 ///
 import * as nodeStream from 'stream';
 import * as sys from 'util';
@@ -56,7 +56,7 @@ export class Writer<T> {
     }
 
     ///
-    /// * `writer = writer.writeAll(val)`
+    /// * `writer = await writer.writeAll(val)`
     ///   writes `val` and ends the writer
     async writeAll(val: T): Promise<Writer<T>> {
         await this.write(val);
@@ -65,7 +65,7 @@ export class Writer<T> {
     }
 
     ///
-    /// * `writer = writer.stop(err)`
+    /// * `writer = await writer.stop(err)`
     ///   stops the writer.
     ///   by default arg is silently ignored
     async stop(arg?: any): Promise<Writer<T> | void> {

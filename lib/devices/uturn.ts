@@ -10,7 +10,7 @@ const tracer: ((...args: any[]) => void) | undefined = undefined; // = console.e
 /// !doc
 /// ## Special device that transforms a writer into a reader
 ///
-/// `import { uturn } from 'f-streams'`
+/// `import { uturn } from 'f-streams-async'`
 ///
 /// * `ut = uturn()`
 ///   creates a uturn device.

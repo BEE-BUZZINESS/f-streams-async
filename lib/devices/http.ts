@@ -50,7 +50,7 @@ function guessType(data: any) {
 /// !doc
 /// ## HTTP Streams
 ///
-/// `import { httpServer, httpClient, httpListener } from 'f-streams'`
+/// `import { httpServer, httpClient, httpListener } from 'f-streams-async'`
 ///
 /// * `server = httpServer(listener, options)`
 ///   Creates an HTTP server.
@@ -90,7 +90,7 @@ export type FactoryWriter = Writer<any> & { _result: any };
 
 export function factory(url: string) {
     return {
-        /// * `reader = factory.reader()`
+        /// * `reader = await factory.reader()`
         async reader() {
             const response = await module.exports
                 .client({
@@ -105,7 +105,7 @@ export function factory(url: string) {
             }
             return response;
         },
-        /// * `writer = factory.writer()`
+        /// * `writer = await factory.writer()`
         async writer() {
             let cli: HttpClientRequest;
             let type: string | null;

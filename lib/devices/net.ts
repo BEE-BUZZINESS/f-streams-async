@@ -4,7 +4,7 @@ import { fixOptions } from './node';
 /// !doc
 /// ## TCP and socket Streams
 ///
-/// `import { sockerServer, socketClient, tcpClient} from 'f-streams'`
+/// `import { sockerServer, socketClient, tcpClient} from 'f-streams-async'`
 ///
 /// * `server = socketServer(serverOptions, listener, streamOptions)`
 ///   Creates a socket server.
@@ -31,7 +31,7 @@ export function server(
 }
 /// * `client = tcpClient(port, host, options)`
 ///   Creates a TCP client.
-///   The stream returned by `client.connect()`  is a reader and writer.
+///   The stream returned by `await client.connect()`  is a reader and writer.
 ///   For a full description of this API, see `tcpClient` in
 ///   https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md
 
@@ -40,7 +40,7 @@ export function tcpClient(port: number, host?: string, options?: SocketOptions) 
 }
 /// * `client = socketClient(path, options)`
 ///   Creates a socket client.
-///   The stream returned by `client.connect()`  is a reader and writer.
+///   The stream returned by `await client.connect()`  is a reader and writer.
 ///   For a full description of this API, see `tcpClient` in
 ///   https://github.com/Sage/f-streams/blob/master/lib/node-wrappers.md
 

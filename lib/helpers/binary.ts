@@ -1,7 +1,7 @@
 /// !doc
 /// ## helpers for binary streams
 ///
-/// `import { binaryReader, binaryWriter } from 'f-streams'`
+/// `import { binaryReader, binaryWriter } from 'f-streams-async'`
 import { Reader as BaseReader } from '../reader';
 import { Writer as BaseWriter } from '../writer';
 
@@ -34,7 +34,7 @@ export class Reader extends BaseReader<Buffer> {
     buf: Buffer | undefined;
     constructor(rd: BaseReader<Buffer>, options: ReaderOptions) {
         ///
-        /// * `buf = reader.read(len)`
+        /// * `buf = await reader.read(len)`
         ///   returns the `len` next bytes of the stream.
         ///   returns a buffer of length `len`, except at the end of the stream.
         ///   The last chunk of the stream may have less than `len` bytes and afterwards the call
@@ -87,7 +87,7 @@ export class Reader extends BaseReader<Buffer> {
     }
 
     ///
-    /// * `buf = reader.peek(len)`
+    /// * `buf = await reader.peek(len)`
     ///   Same as `read` but does not advance the read pointer.
     ///   Another `read` would read the same data again.
     async peek(len: number) {
@@ -95,7 +95,7 @@ export class Reader extends BaseReader<Buffer> {
     }
 
     ///
-    /// * `reader.peekAll()`
+    /// * `await reader.peekAll()`
     ///   Same as `readAll` but does not advance the read pointer.
     async peekAll(): Promise<Buffer | undefined> {
         this.buf = await this.readAll() as Buffer;
@@ -113,24 +113,24 @@ export class Reader extends BaseReader<Buffer> {
     }
 }
 ///
-/// * `val = reader.readInt8()`
-/// * `val = reader.readUInt8()`
-/// * `val = reader.readInt16()`
-/// * `val = reader.readUInt16()`
-/// * `val = reader.readInt32()`
-/// * `val = reader.readUInt32()`
-/// * `val = reader.readFloat()`
-/// * `val = reader.readDouble()`
+/// * `val = await reader.readInt8()`
+/// * `val = await reader.readUInt8()`
+/// * `val = await reader.readInt16()`
+/// * `val = await reader.readUInt16()`
+/// * `val = await reader.readInt32()`
+/// * `val = await reader.readUInt32()`
+/// * `val = await reader.readFloat()`
+/// * `val = await reader.readDouble()`
 ///   Specialized readers for numbers.
 ///
-/// * `val = reader.peekInt8()`
-/// * `val = reader.peekUInt8()`
-/// * `val = reader.peekInt16()`
-/// * `val = reader.peekUInt16()`
-/// * `val = reader.peekInt32()`
-/// * `val = reader.peekUInt32()`
-/// * `val = reader.peekFloat()`
-/// * `val = reader.peekDouble()`
+/// * `val = await reader.peekInt8()`
+/// * `val = await reader.peekUInt8()`
+/// * `val = await reader.peekInt16()`
+/// * `val = await reader.peekUInt16()`
+/// * `val = await reader.peekInt32()`
+/// * `val = await reader.peekUInt32()`
+/// * `val = await reader.peekFloat()`
+/// * `val = await reader.peekDouble()`
 ///   Specialized peekers for numbers.
 function numberReader(name: string, len: number, peekOnly?: boolean) {
     return async function(this: Reader) {
@@ -143,14 +143,14 @@ function numberReader(name: string, len: number, peekOnly?: boolean) {
     };
 }
 
-/// * `val = reader.unreadInt8()`
-/// * `val = reader.unreadUInt8()`
-/// * `val = reader.unreadInt16()`
-/// * `val = reader.unreadUInt16()`
-/// * `val = reader.unreadInt32()`
-/// * `val = reader.unreadUInt32()`
-/// * `val = reader.unreadFloat()`
-/// * `val = reader.unreadDouble()`
+/// * `val = await reader.unreadInt8()`
+/// * `val = await reader.unreadUInt8()`
+/// * `val = await reader.unreadInt16()`
+/// * `val = await reader.unreadUInt16()`
+/// * `val = await reader.unreadInt32()`
+/// * `val = await reader.unreadUInt32()`
+/// * `val = await reader.unreadFloat()`
+/// * `val = await reader.unreadDouble()`
 ///   Specialized unreaders for numbers.
 function numberUnreader(len: number) {
     return function(this: Reader) {
@@ -189,7 +189,7 @@ export class Writer extends BaseWriter<Buffer> {
     }
 
     ///
-    /// * `writer.flush()`
+    /// * `await writer.flush()`
     ///   Flushes the buffer to the wrapped writer.
     async flush() {
         if (this.pos > 0) await this.writer.write(this.buf.slice(0, this.pos));
@@ -207,10 +207,10 @@ export class Writer extends BaseWriter<Buffer> {
     }
 
     ///
-    /// * `writer.write(buf)`
+    /// * `await writer.write(buf)`
     ///   Writes `buf`.
     ///   Note: writes are buffered.
-    ///   Use the `flush()` call if you need to flush before the end of the stream.
+    ///   Use the `await flush()` call if you need to flush before the end of the stream.
     async writeDate(buf: Buffer) {
         if (buf === undefined || buf.length > this.buf.length) {
             await this.flush();
@@ -224,14 +224,14 @@ export class Writer extends BaseWriter<Buffer> {
 }
 
 ///
-/// * `writer.writeInt8(val)`
-/// * `writer.writeUInt8(val)`
-/// * `writer.writeInt16(val)`
-/// * `writer.writeUInt16(val)`
-/// * `writer.writeInt32(val)`
-/// * `writer.writeUInt32(val)`
-/// * `writer.writeFloat(val)`
-/// * `writer.writeDouble(val)`
+/// * `await writer.writeInt8(val)`
+/// * `await writer.writeUInt8(val)`
+/// * `await writer.writeInt16(val)`
+/// * `await writer.writeUInt16(val)`
+/// * `await writer.writeInt32(val)`
+/// * `await writer.writeUInt32(val)`
+/// * `await writer.writeFloat(val)`
+/// * `await writer.writeDouble(val)`
 ///   Specialized writers for numbers.
 function numberWriter(name: string, len: number) {
     return async function(this: Writer, val: number) {

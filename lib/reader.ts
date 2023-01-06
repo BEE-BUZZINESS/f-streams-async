@@ -25,7 +25,7 @@
 /// !doc
 /// ## EZ Streams core reader API
 ///
-/// `import * as f from 'f-streams'`
+/// `import * as f from 'f-streams-async'`
 ///
 import { Callback, funnel, map, wait } from 'f-promise-async';
 import * as nodeStream from 'stream';
@@ -76,7 +76,7 @@ export class Reader<T> {
         if (stop) this._stop = stop;
     }
 
-    /// * `count = reader.each(fn)`
+    /// * `count = await reader.each(fn)`
     ///   Similar to `forEach` on arrays.
     ///   The `fn` function is called as `fn(elt, i)`.
     ///   This call is asynchonous. It returns the number of entries processed when the end of stream is reached.
@@ -110,7 +110,7 @@ export class Reader<T> {
         );
     }
 
-    /// * `result = reader.every(fn)`
+    /// * `result = await reader.every(fn)`
     ///   Similar to `every` on arrays.
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns true at the end of stream if `fn` returned true on every entry.
@@ -129,7 +129,7 @@ export class Reader<T> {
         });
     }
 
-    /// * `element = reader.find(fn)`
+    /// * `element = await reader.find(fn)`
     ///   Similar to `find` on arrays.
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns undefined at the end of stream if `fn` returned false on every entry.
@@ -148,7 +148,7 @@ export class Reader<T> {
         });
     }
 
-        /// * `result = reader.some(fn)`
+    /// * `result = await reader.some(fn)`
     ///   Similar to `some` on arrays.
     ///   The `fn` function is called as `fn(elt)`.
     ///   Returns false at the end of stream if `fn` returned false on every entry.
@@ -167,7 +167,7 @@ export class Reader<T> {
         });
     }
 
-    /// * `result = reader.reduce(fn, initial)`
+    /// * `result = await reader.reduce(fn, initial)`
     ///   Similar to `reduce` on arrays.
     ///   The `fn` function is called as `fn(current, elt)` where `current` is `initial` on the first entry and
     ///   the result of the previous `fn` call otherwise.
@@ -182,7 +182,7 @@ export class Reader<T> {
         });
     }
 
-    /// * `writer = reader.pipe(writer)`
+    /// * `writer = await reader.pipe(writer)`
     ///   Pipes from `stream` to `writer`.
     ///   Returns the writer for chaining.
     // should be pipe<R extends Writer<T>>(writer: R)
@@ -316,7 +316,7 @@ export class Reader<T> {
         );
     }
 
-    /// * `result = reader.toArray()`
+    /// * `result = await reader.toArray()`
     ///   Reads all entries and returns them to an array.
     ///   Note that this call is an anti-pattern for streaming but it may be useful when working with small streams.
     async toArray(): Promise<T[]> {
@@ -329,7 +329,7 @@ export class Reader<T> {
         );
     }
 
-    /// * `result = reader.readAll()`
+    /// * `result = await reader.readAll()`
     ///   Reads all entries and returns them as a single string or buffer. Returns undefined if nothing has been read.
     ///   Note that this call is an anti-pattern for streaming but it may be useful when working with small streams.
     async readAll(): Promise<string | Buffer | T[] | undefined> {
@@ -507,8 +507,8 @@ export class Reader<T> {
     /// * `reader = reader.peekable()`
     ///   Returns a stream which has been extended with two methods to support lookahead.
     ///   The lookahead methods are:
-    ///   - `reader.peek()`: same as `read()` but does not consume the item.
-    ///   - `reader.unread(val)`: pushes `val` back so that it will be returned by the next `read()`
+    ///   - `await reader.peek()`: same as `await read()` but does not consume the item.
+    ///   - `reader.unread(val)`: pushes `val` back so that it will be returned by the next `await read()`
     peekable(): PeekableReader<T> {
         const that: Reader<T> = this;
         return new PeekableReader(that);
@@ -621,7 +621,7 @@ export class Reader<T> {
         return require('./devices/node').reader(readable.pipe(duplex));
     }
 
-    /// * `cmp = reader1.compare(reader2)`
+    /// * `cmp = await reader1.compare(reader2)`
     ///   compares reader1 and reader2 return 0 if equal,
     async compare(other: Reader<T>, options?: CompareOptions<T>): Promise<number> {
         const opts = options || {};
@@ -639,7 +639,7 @@ export class Reader<T> {
         }
     }
 
-    /// * `reader.stop(arg)`
+    /// * `await reader.stop(arg)`
     ///   Informs the source that the consumer(s) has(ve) stopped reading.
     ///   The source should override this method if it needs to free resources when the stream ends.
     ///   `arg` is an optional argument.

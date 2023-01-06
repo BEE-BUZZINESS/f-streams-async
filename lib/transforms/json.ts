@@ -52,7 +52,7 @@
 ///
 /// ## API
 ///
-/// `import { jsonParser, jsonFormatter }from 'f-streams'`
+/// `import { jsonParser, jsonFormatter }from 'f-streams-async'`
 ///
 import { Reader } from '../reader';
 import { Writer } from '../writer';

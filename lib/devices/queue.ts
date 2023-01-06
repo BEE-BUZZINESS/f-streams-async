@@ -9,7 +9,7 @@ import * as generic from './generic';
 /// The queue device can be used to desynchronize processing between one or several tasks that produce
 /// data and a task that consumes queued data.
 ///
-/// `import { queue } from 'f-streams'`
+/// `import { queue } from 'f-streams-async'`
 ///
 /// * `q = queue(options)`
 ///   creates a queue.

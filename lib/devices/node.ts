@@ -11,7 +11,7 @@ require('../writer').decorate(streams.WritableStream.prototype);
 /// !doc
 /// ## Stream wrappers for native node streams
 ///
-/// `import { nodeReader, nodeWriter } from 'f-streams'`
+/// `import { nodeReader, nodeWriter } from 'f-streams-async'`
 ///
 /// * `reader = nodeReader(stream, options)`
 ///   wraps a node.js stream as a reader.

@@ -1,7 +1,7 @@
 /// !doc
 /// ## Stream transform for MIME multipart
 ///
-/// `import { multipartParser, multipartFormatter }from 'f-streams'`
+/// `import { multipartParser, multipartFormatter }from 'f-streams-async'`
 ///
 import { handshake } from 'f-promise-async';
 import * as generic from '../devices/generic';
