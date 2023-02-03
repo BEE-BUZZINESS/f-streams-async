@@ -41,8 +41,8 @@ describe(module.id, () => {
         };
 
         const r1 = binaryFileReader(sample);
-        const r3 = await r1.transform(tranformFn(true));
-        const r4 = await r3.transform(tranformFn(false));
+        const r3 = r1.transform(tranformFn(true));
+        const r4 = r3.transform(tranformFn(false));
         await isRejected(r4.readAll(), 'Error chain');
     });
 });
