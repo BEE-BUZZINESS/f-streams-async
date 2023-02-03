@@ -10,7 +10,7 @@ The data that you push or pull may be anything: buffers and strings of course, b
 There is only one value which has a special meaning: `undefined`. Reading `undefined` means that you have reached the end of a reader stream.
 Writing `undefined` signals that you want to _end_ a writer stream.
 
-F-streams-async use the [f-promise-async](https://github.com/s.berthier/f-promise-async) library.
+F-streams-async use the [f-promise-async](https://github.com/BEE-BUZZINESS/f-promise-async) library.
 
 ## Installation
 

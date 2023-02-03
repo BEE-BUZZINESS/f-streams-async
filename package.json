@@ -1,7 +1,7 @@
 {
     "name": "f-streams-async",
     "description": "node.js streams with promises",
-    "version": "2.0.2",
+    "version": "3.0.0",
     "license": "MIT",
     "author": {
         "name": "Sébastien Berthier",
@@ -11,7 +11,7 @@
     "typings": "build/index.d.ts",
     "repository": {
         "type": "git",
-        "url": "git://github.com/s.berthier/f-streams-async.git"
+        "url": "git://github.com/BEE-BUZZINESS/f-streams-async.git"
     },
     "engines": {
         "node": ">=14.0.0"
