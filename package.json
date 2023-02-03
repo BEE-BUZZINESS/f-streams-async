@@ -14,16 +14,16 @@
         "url": "git://github.com/BEE-BUZZINESS/f-streams-async.git"
     },
     "engines": {
-        "node": ">=14.0.0"
+        "node": ">=18.0.0"
     },
     "dependencies": {
-        "f-promise-async": "^3.0.0"
+        "f-promise-async": "^3.0.1"
     },
     "devDependencies": {
         "@types/chai": "^4.2.9",
         "@types/chai-as-promised": "^7.1.5",
         "@types/mocha": "^10.0.1",
-        "@types/node": "^14.14.22",
+        "@types/node": "^18.11.18",
         "chai": "^4.1.1",
         "chai-as-promised": "^7.1.1",
         "list-open-files": "^1.1.0",
