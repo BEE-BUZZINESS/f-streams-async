@@ -711,7 +711,7 @@ export function httpListener(listener: HttpListener, options: HttpServerOptions)
                     ),
                 );
             } else {
-                await listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options))
+                await listener(new HttpServerRequest(request, options), new HttpServerResponse(response, options));
             }
         } catch (err) {
             // handlers do not read GET requests - so we remove the listeners, in case
