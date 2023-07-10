@@ -33,14 +33,13 @@
         "eslint-plugin-import": "^2.26.0",
         "list-open-files": "^1.1.0",
         "mocha": "^10.2.0",
-        "source-map-support": "^0.5.19",
         "typescript": "^5.1.6"
     },
     "scripts": {
         "prepare": "npm run compile",
         "compile": "rm -rf build && tsc",
         "compile-watch": "tsc -w",
-        "test": "mocha --require source-map-support/register build/test/unit --exit --timeout 5000 --full-trace --async-stack-traces",
+        "test": "mocha -n enable-source-maps build/test/unit --exit --timeout 5000 --full-trace --async-stack-traces",
         "lint": "eslint 'lib/**/*.ts'"
     },
     "readmeFilename": "README.md"
