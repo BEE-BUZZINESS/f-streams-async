@@ -141,7 +141,7 @@ export class Reader<T> {
                 const val =  await this.read();
                 if (val === undefined) return undefined;
                 if ( await f.call(null, val)) {
-                     await this.stop();
+                    await this.stop();
                     return val;
                 }
             }

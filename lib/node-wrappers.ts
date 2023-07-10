@@ -1245,7 +1245,11 @@ exports.using = function(
     options?: any,
     fn?: (stream: any) => any,
 ) {
-    if (!fn && typeof options === 'function') (fn = options), (options = null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    if (!fn && typeof options === 'function') {
+        fn = options;
+        options = null;
+    }
     if (!fn) throw new Error('using body missing');
     const _stream = new constructor(emitter, options);
     try {
