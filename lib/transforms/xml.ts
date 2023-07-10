@@ -63,8 +63,12 @@ const begWord: any = {},
         });
     }
     for (let i = 0; i <= 9; i++) add(inWord, '0', i);
-    for (let i = 0; i < 26; i++) add(begWord, 'aA', i), add(inWord, 'aA', i);
-    add(begWord, ':_'), add(inWord, ':_-.');
+    for (let i = 0; i < 26; i++) {
+        add(begWord, 'aA', i);
+        add(inWord, 'aA', i);
+    }
+    add(begWord, ':_');
+    add(inWord, ':_-.');
     add(space, ' \t\r\n');
     Object.keys(entitiesByChar).forEach(ch => {
         entitiesByName[entitiesByChar[ch]] = ch;
@@ -307,7 +311,10 @@ export function parser(options?: ParserOptions | string) {
                             }
                         }
                         val += clean(str.substring(pos, j));
-                        if (str.charCodeAt(j + 1) === SLASH) bld.value(val), (pos = j);
+                        if (str.charCodeAt(j + 1) === SLASH) {
+                            bld.value(val);
+                            pos = j;
+                        }
                         else checkEmpty(val);
                         break;
                     } else {
@@ -394,13 +401,13 @@ export function formatter(options?: FormatterOptions | string) {
             return typeof val !== 'string'
                 ? '' + val
                 : val.replace(/([&<>"']|[^ -~\u00a1-\ud7ff\ue000-\ufffd])/g, (ch: string) => {
-                      const ent = entitiesByChar[ch];
-                      if (ent) return '&' + ent + ';';
-                      let hex = ch.charCodeAt(0).toString(16);
-                      while (hex.length < 2) hex = '0' + hex;
-                      while (hex.length > 2 && hex.length < 4) hex = '0' + hex;
-                      return '&#x' + hex + ';';
-                  });
+                    const ent = entitiesByChar[ch];
+                    if (ent) return '&' + ent + ';';
+                    let hex = ch.charCodeAt(0).toString(16);
+                    while (hex.length < 2) hex = '0' + hex;
+                    while (hex.length > 2 && hex.length < 4) hex = '0' + hex;
+                    return '&#x' + hex + ';';
+                });
         }
         return {
             beginTag: tag => {
