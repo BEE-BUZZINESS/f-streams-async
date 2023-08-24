@@ -7,7 +7,7 @@ const { ok, strictEqual, deepEqual } = assert;
 let server: HttpServer;
 
 describe(module.id, () => {
-    it('start echo server', async () => {
+    before('start echo server', async () => {
         server = httpServer(async function(req, res) {
             if (req.method === 'POST') {
                 const text = await req.readAll();
@@ -38,6 +38,10 @@ describe(module.id, () => {
         });
         await server.listen(3005);
         ok(true, 'server started');
+    });
+
+    after(async () => {
+        await server.close();
     });
 
     it('http test', async () => {
