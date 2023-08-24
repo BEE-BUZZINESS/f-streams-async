@@ -39,7 +39,7 @@
         "prepare": "npm run compile",
         "compile": "rm -rf build && tsc",
         "compile-watch": "tsc -w",
-        "test": "mocha -n enable-source-maps build/test/unit --exit --timeout 5000 --full-trace --async-stack-traces",
+        "test": "mocha -n enable-source-maps build/test/unit --timeout 5000 --full-trace --async-stack-traces",
         "lint": "eslint 'lib/**/*.ts'"
     },
     "readmeFilename": "README.md"

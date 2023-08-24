@@ -829,6 +829,7 @@ function _fixHttpClientOptions(options: HttpClientOptions) {
         opts.port = parsed.port;
         opts.path = parsed.pathname + (parsed.query ? '?' + parsed.query : '');
     }
+    opts.destroyOnStop = opts.destroyOnStop ?? true;
     opts.protocol = opts.protocol || 'http:';
     opts.port = opts.port || (opts.protocol === 'https:' ? '443' : '80');
     opts.path = opts.path || '/';
