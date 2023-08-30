@@ -842,7 +842,8 @@ function _fixHttpClientOptions(options: HttpClientOptions) {
         },
         {} as http.IncomingHttpHeaders,
     );
-    opts.module = options.module || require(opts.protocol.substring(0, opts.protocol.length - 1));
+
+    opts.module = options.module || (opts.protocol === 'https:' ? https : http);
     if (opts.user != null) {
         // assumes basic auth for now
         let token = opts.user + ':' + (opts.password || '');
@@ -872,7 +873,7 @@ function _fixHttpClientOptions(options: HttpClientOptions) {
                 // https requests will be handled with CONNECT method
                 opts.isHttps = opts.protocol.substr(0, 5) === 'https';
                 if (opts.isHttps) {
-                    opts.proxy.module = require(opts.proxy.protocol.substring(0, opts.proxy.protocol.length - 1));
+                    opts.proxy.module = (opts.proxy.protocol === 'https:' ? https : http);
                     opts.proxy.headers = opts.proxy.headers || {};
                     opts.proxy.headers.host = opts.host;
                 } else {
