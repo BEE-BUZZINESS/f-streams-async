@@ -56,12 +56,14 @@ export class Wrapper<EmitterT extends Emitter> {
     _closed: boolean;
     _onClose: (err?: Error) => void;
     _autoClosed: (() => void)[];
+    _wrapperListeners: { eventName: string; fct: (...args: any[]) => void }[];
     _doesNotEmitClose: boolean;
 
     constructor(emitter: EmitterT, options?: WrapperOptions) {
         this._emitter = emitter;
         this._closed = false;
-        emitter.on('close', () => {
+        this._wrapperListeners = [];
+        this._emitterOn('close', () => {
             this._onClose && this._onClose();
         });
         // hook for subclasses
@@ -75,6 +77,11 @@ export class Wrapper<EmitterT extends Emitter> {
         this._autoClosed.forEach(fn => {
             fn.call(this);
         });
+    }
+
+    _emitterOn(eventName: string, fct: (...args: any[]) => void) {
+        this._wrapperListeners.push({eventName, fct});
+        this._emitter.on(eventName, fct);
     }
 
     async close() {
@@ -104,7 +111,9 @@ export class Wrapper<EmitterT extends Emitter> {
     ///    unwraps and returns the underlying emitter.
     ///    The wrapper should not be used after this call.
     unwrap() {
-        this._emitter.removeAllListeners();
+        this._wrapperListeners.forEach(({eventName, fct}) => {
+            this._emitter.removeListener(eventName, fct);
+        });
         this._closed = true;
         return this._emitter;
     }
@@ -159,13 +168,13 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
         this._onData = this._trackData;
         this._destroyOnClose = options.destroyOnStop || false;
 
-        emitter.on('error', (err: Error) => {
+        this._emitterOn('error', (err: Error) => {
             this._onData(err);
         });
-        emitter.on('data', (chunk: Data) => {
+        this._emitterOn('data', (chunk: Data) => {
             this._onData(undefined, chunk);
         });
-        emitter.on('end', () => {
+        this._emitterOn('end', () => {
             this._onData();
         });
 
@@ -342,11 +351,11 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         options = options || {};
         this._encoding = options.encoding;
 
-        emitter.on('error', (err: Error) => {
+        this._emitterOn('error', (err: Error) => {
             if (this._onDrain) this._onDrain(err);
             else this._error = err;
         });
-        emitter.on('drain', () => {
+        this._emitterOn('drain', () => {
             if (this._onDrain) this._onDrain();
         });
 
@@ -677,7 +686,7 @@ export class Server<EmitterT extends ServerEmitter> extends Wrapper<EmitterT> {
             this._autoClosed.push(() => {
                 reply(new Error('server was closed unexpectedly'));
             });
-            this._emitter.on('error', reply);
+            this._emitterOn('error', reply);
             this._emitter.listen.apply(this._emitter, args);
         });
     }
@@ -938,7 +947,7 @@ export class HttpClientRequest extends WritableStream<http.ClientRequest> {
         this._options = options;
         this._done = false;
 
-        this._emitter.on('error', (err: Error) => {
+        this._emitterOn('error', (err: Error) => {
             if (!this._done) this._onResponse(err);
         });
 
