@@ -1,7 +1,7 @@
 {
     "name": "f-streams-async",
     "description": "node.js streams with promises",
-    "version": "3.3.1",
+    "version": "3.4.0",
     "license": "MIT",
     "author": {
         "name": "Sébastien Berthier",

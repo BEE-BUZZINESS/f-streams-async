@@ -337,12 +337,14 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
 
 export interface WritableOptions extends WrapperOptions {
     encoding?: BufferEncoding;
+    destroyOnStop?: boolean;
 }
 
 export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrapper<EmitterT> {
     _error: Error;
     _onDrain: (err?: Error) => void;
     _encoding?: BufferEncoding;
+    _destroyOnClose: boolean;
     /// * `writer = stream.writer`
     ///   returns a clean f writer.
     writer: Writer<any>;
@@ -350,6 +352,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         super(emitter, options);
         options = options || {};
         this._encoding = options.encoding;
+        this._destroyOnClose = options.destroyOnStop || false;
 
         this._emitterOn('error', (err: Error) => {
             if (this._onDrain) this._onDrain(err);
@@ -378,10 +381,10 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
                 //
                 if (!this._emitter.write(data)) await this._drain();
             } else {
-                await wait(cb => this._emitter.end.call(this._emitter, cb));
+                await this.stop();
             }
             return this.writer;
-        });
+        }, this.stop.bind(this));
     }
 
     async _drain() {
@@ -429,6 +432,17 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
             });
         }
         return this;
+    }
+
+    async stop(arg?: any) {
+        if (arg && arg !== true) this._error = this._error || arg;
+        if (!this.closed) {
+            await wait(cb => this._emitter.end.call(this._emitter, cb));
+            this.unwrap();
+            if (this._destroyOnClose && this._emitter instanceof stream.Writable) {
+                this._emitter.destroy();
+            }
+        }
     }
 
     get events() {
