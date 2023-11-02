@@ -8,7 +8,7 @@ const { equal, ok, strictEqual, deepEqual } = assert;
 let server: HttpServer;
 
 describe(module.id, () => {
-    before(() => {
+    before(async () => {
         server = httpServer(async function (req, res) {
             if (req.method === 'POST') {
                 const text = await req.readAll();
@@ -29,6 +29,7 @@ describe(module.id, () => {
                 res.end('reply for GET');
             }
         });
+        await server.listen(3004);
     });
 
     after(async () => {
@@ -45,7 +46,6 @@ describe(module.id, () => {
                 'POST result ok for ' + type,
             );
         }
-        await server.listen(3004);
         await _test('text/plain', 'post test');
         await _test('application/json', { test: 'post test' });
         await _test('text/html', '<!DOCTYPE html>');

@@ -378,10 +378,10 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
                 //
                 if (!this._emitter.write(data)) await this._drain();
             } else {
-                await wait(cb => this._emitter.end.call(this._emitter, cb));
+                await this.stop();
             }
             return this.writer;
-        });
+        }, this.stop.bind(this));
     }
 
     async _drain() {
@@ -429,6 +429,14 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
             });
         }
         return this;
+    }
+
+    async stop(arg?: any) {
+        if (arg && arg !== true) this._error = this._error || arg;
+        if (!this.closed) {
+            await wait(cb => this._emitter.end.call(this._emitter, cb));
+            this.unwrap();
+        }
     }
 
     get events() {
