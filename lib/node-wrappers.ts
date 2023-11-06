@@ -180,6 +180,7 @@ export class ReadableStream<EmitterT extends NodeJS.ReadableStream> extends Wrap
 
         this._autoClosed.push(() => {
             if (!this._done) this._onData(new Error('stream was closed unexpectedly'));
+            this.unwrap();
         });
         this.reader = generic.reader(this._readChunk.bind(this), this.stop.bind(this));
     }
@@ -362,7 +363,8 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         this._autoClosed.push(() => {
             const err = new Error('stream was closed unexpectedly');
             if (this._onDrain) this._onDrain(err);
-            else this._error = err;
+            else this._error = err; 
+            this.unwrap();       
         });
         this.writer = generic.writer(async (data?: Data) => {
             // emitter has been closed before writer end, consider this as normal
@@ -378,7 +380,7 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
                 //
                 if (!this._emitter.write(data)) await this._drain();
             } else {
-                await this.stop();
+                await wait(cb => this._emitter.end.call(this._emitter, cb));
             }
             return this.writer;
         }, this.stop.bind(this));
@@ -435,7 +437,6 @@ export class WritableStream<EmitterT extends NodeJS.WritableStream> extends Wrap
         if (arg && arg !== true) this._error = this._error || arg;
         if (!this.closed) {
             await wait(cb => this._emitter.end.call(this._emitter, cb));
-            this.unwrap();
         }
     }
 
