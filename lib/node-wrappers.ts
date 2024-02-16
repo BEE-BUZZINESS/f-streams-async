@@ -23,6 +23,7 @@ import * as https from 'https';
 import * as net from 'net';
 import * as os from 'os';
 import * as stream from 'stream';
+import type { EventEmitter } from 'stream';
 import { parse as parseUrl } from 'url';
 import * as generic from './devices/generic';
 import { Reader } from './reader';
@@ -37,7 +38,7 @@ import { Writer } from './writer';
 /// * `wrapper = new streams.Wrapper(stream)`
 ///   creates a wrapper.
 
-export interface Emitter extends NodeJS.EventEmitter {
+export interface Emitter extends EventEmitter {
     end?: (data?: any, encoding?: string) => void;
     close?: () => void;
     destroySoon?: () => void;
